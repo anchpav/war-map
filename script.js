@@ -59,7 +59,6 @@ function renderMap() {
     return yearMatch && countryMatch;
   });
 
-  // Heatmap
   const heatPoints = [];
   filtered.forEach(c => {
     const marker = L.marker([c.lat, c.lon]).bindPopup(`
