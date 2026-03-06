@@ -7,92 +7,20 @@
     "description": "Ongoing clashes in Eastern Ukraine",
     "country": "Ukraine",
     "year": 2026,
-    "date": "2026-03-01",
     "actor1": { "lat": 50.45, "lon": 30.52, "name": "Side A" },
-    "actor2": { "lat": 50.46, "lon": 30.53, "name": "Side B" }
+    "actor2": { "lat": 50.46, "lon": 30.53, "name": "Side B" },
+    "date": "2026-03-05"
   },
   {
     "id": 2,
-    "lat": 34.0522,
-    "lon": -118.2437,
-    "title": "Conflict in USA",
-    "description": "Minor conflict example",
-    "country": "USA",
-    "year": 2026,
-    "date": "2026-02-25",
-    "actor1": { "lat": 34.05, "lon": -118.24, "name": "Group X" },
-    "actor2": { "lat": 34.06, "lon": -118.25, "name": "Group Y" }
-  },
-  {
-    "id": 3,
     "lat": 31.7683,
     "lon": 35.2137,
     "title": "Conflict in Israel",
     "description": "Escalation near urban areas",
     "country": "Israel",
     "year": 2025,
-    "date": "2025-12-15",
     "actor1": { "lat": 31.76, "lon": 35.20, "name": "Force Alpha" },
-    "actor2": { "lat": 31.78, "lon": 35.22, "name": "Force Beta" }
-  },
-  {
-    "id": 4,
-    "lat": 15.5007,
-    "lon": 32.5599,
-    "title": "Conflict in Sudan",
-    "description": "Armed clashes reported in Khartoum",
-    "country": "Sudan",
-    "year": 2024,
-    "date": "2024-11-10",
-    "actor1": { "lat": 15.49, "lon": 32.54, "name": "Faction North" },
-    "actor2": { "lat": 15.52, "lon": 32.57, "name": "Faction South" }
-  },
-  {
-    "id": 5,
-    "lat": 33.3152,
-    "lon": 44.3661,
-    "title": "Conflict in Iraq",
-    "description": "Localized militant activity",
-    "country": "Iraq",
-    "year": 2023,
-    "date": "2023-09-05",
-    "actor1": { "lat": 33.31, "lon": 44.35, "name": "Unit One" },
-    "actor2": { "lat": 33.33, "lon": 44.38, "name": "Unit Two" }
-  },
-  {
-    "id": 6,
-    "lat": -1.2921,
-    "lon": 36.8219,
-    "title": "Conflict in Kenya",
-    "description": "Localized unrest in Nairobi",
-    "country": "Kenya",
-    "year": 2025,
-    "date": "2025-08-12",
-    "actor1": { "lat": -1.29, "lon": 36.82, "name": "Group A" },
-    "actor2": { "lat": -1.30, "lon": 36.83, "name": "Group B" }
-  },
-  {
-    "id": 7,
-    "lat": 35.6895,
-    "lon": 139.6917,
-    "title": "Conflict in Japan",
-    "description": "Minor clashes reported",
-    "country": "Japan",
-    "year": 2026,
-    "date": "2026-02-28",
-    "actor1": { "lat": 35.68, "lon": 139.69, "name": "Team Red" },
-    "actor2": { "lat": 35.69, "lon": 139.70, "name": "Team Blue" }
-  },
-  {
-    "id": 8,
-    "lat": -33.9249,
-    "lon": 18.4241,
-    "title": "Conflict in South Africa",
-    "description": "Protests escalated to minor clashes",
-    "country": "South Africa",
-    "year": 2024,
-    "date": "2024-12-20",
-    "actor1": { "lat": -33.92, "lon": 18.42, "name": "Faction 1" },
-    "actor2": { "lat": -33.93, "lon": 18.43, "name": "Faction 2" }
+    "actor2": { "lat": 31.78, "lon": 35.22, "name": "Force Beta" },
+    "date": "2025-12-25"
   }
 ]
