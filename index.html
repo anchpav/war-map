@@ -1,69 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Global Conflict Tracker</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global Conflict Tracker</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <h1>Global Conflict Tracker</h1>
+        <p>Interactive Leaflet map with local JSON data, timeline, and country filters.</p>
+      </header>
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <main class="app">
-    <header class="header">
-      <h1>Global Conflict Tracker</h1>
-      <p>Interactive Leaflet map with local JSON data, timeline, and country filters.</p>
-    </header>
+      <section class="controls" aria-label="Filters">
+        <div class="control">
+          <label for="yearFilter">Year: <strong id="yearLabel">All</strong></label>
+          <input id="yearFilter" type="range" min="2020" max="2030" value="2030" step="1" />
+          <button id="yearReset" class="btn">Show all years</button>
+        </div>
+        <div class="control">
+          <label for="countryFilter">Countries (multi-select)</label>
+          <select id="countryFilter" multiple size="6" aria-label="Country multi-select"></select>
+          <p class="hint">Tip: Ctrl/Cmd + click for multiple countries. If nothing selected, all countries are shown.</p>
+        </div>
+      </section>
 
-    <section class="controls">
-      <div class="control">
-        <label for="yearFilter">Year: <strong id="yearLabel">All</strong></label>
-        <input id="yearFilter" type="range" min="2020" max="2030" value="2030" step="1" />
-        <button id="yearReset" class="btn">Show all years</button>
-      </div>
-      <div class="control">
-        <label for="countryFilter">Countries (multi-select)</label>
-        <select id="countryFilter" multiple size="6"></select>
-        <p class="hint">Tip: Ctrl/Cmd + click for multiple countries. If nothing selected, all countries are shown.</p>
-      </div>
-    </section>
+      <section class="stats">
+        <div class="card">
+          <h2>Visible Conflicts</h2>
+          <p id="visibleCount">0</p>
+        </div>
+        <div class="card">
+          <h2>Days Without War</h2>
+          <p id="daysWithoutWar">--</p>
+        </div>
+        <div class="card">
+          <h2>Source</h2>
+          <p id="sourceLabel">Local JSON</p>
+        </div>
+      </section>
 
-    <section class="stats">
-      <div class="card">
-        <h2>Visible Conflicts</h2>
-        <p id="visibleCount">0</p>
-      </div>
-      <div class="card">
-        <h2>Days Without War</h2>
-        <p id="daysWithoutWar">--</p>
-      </div>
-      <div class="card">
-        <h2>Source</h2>
-        <p id="sourceLabel">Local JSON</p>
-      </div>
-    </section>
+      <section id="mapWrap" class="map-wrap">
+        <div id="map"></div>
+      </section>
 
-    <section class="map-wrap">
-      <div id="map"></div>
-    </section>
+      <section id="dataUnavailable" class="data-unavailable" hidden>
+        <h2>Data unavailable</h2>
+        <p>Could not load local JSON source. Please check the file and try again.</p>
+      </section>
+    </main>
 
-    <section id="dataUnavailable" class="data-unavailable" hidden>
-      <h2>Data unavailable</h2>
-      <p>Could not load local JSON source. Please check the file and try again.</p>
-    </section>
-  </main>
-
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
-  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-  <script src="script.js"></script>
-</body>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      crossorigin=""
+    ></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="script.js"></script>
+  </body>
 </html>
