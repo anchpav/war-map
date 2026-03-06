@@ -1,67 +1,58 @@
- (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/conflicts.json b/conflicts.json
-new file mode 100644
-index 0000000000000000000000000000000000000000..9459077ee77fcdc22e6b9ff844cdc9b2f1d39df0
---- /dev/null
-+++ b/conflicts.json
-@@ -0,0 +1,57 @@
-+[
-+  {
-+    "id": 1,
-+    "lat": 50.4501,
-+    "lon": 30.5234,
-+    "title": "Conflict in Ukraine",
-+    "description": "Ongoing clashes in Eastern Ukraine",
-+    "country": "Ukraine",
-+    "year": 2026,
-+    "actor1": { "lat": 50.45, "lon": 30.52, "name": "Side A" },
-+    "actor2": { "lat": 50.46, "lon": 30.53, "name": "Side B" }
-+  },
-+  {
-+    "id": 2,
-+    "lat": 34.0522,
-+    "lon": -118.2437,
-+    "title": "Conflict in USA",
-+    "description": "Minor conflict example",
-+    "country": "USA",
-+    "year": 2026,
-+    "actor1": { "lat": 34.05, "lon": -118.24, "name": "Group X" },
-+    "actor2": { "lat": 34.06, "lon": -118.25, "name": "Group Y" }
-+  },
-+  {
-+    "id": 3,
-+    "lat": 31.7683,
-+    "lon": 35.2137,
-+    "title": "Conflict in Israel",
-+    "description": "Escalation near urban areas",
-+    "country": "Israel",
-+    "year": 2025,
-+    "actor1": { "lat": 31.76, "lon": 35.20, "name": "Force Alpha" },
-+    "actor2": { "lat": 31.78, "lon": 35.22, "name": "Force Beta" }
-+  },
-+  {
-+    "id": 4,
-+    "lat": 15.5007,
-+    "lon": 32.5599,
-+    "title": "Conflict in Sudan",
-+    "description": "Armed clashes reported in Khartoum",
-+    "country": "Sudan",
-+    "year": 2024,
-+    "actor1": { "lat": 15.49, "lon": 32.54, "name": "Faction North" },
-+    "actor2": { "lat": 15.52, "lon": 32.57, "name": "Faction South" }
-+  },
-+  {
-+    "id": 5,
-+    "lat": 33.3152,
-+    "lon": 44.3661,
-+    "title": "Conflict in Iraq",
-+    "description": "Localized militant activity",
-+    "country": "Iraq",
-+    "year": 2023,
-+    "actor1": { "lat": 33.31, "lon": 44.35, "name": "Unit One" },
-+    "actor2": { "lat": 33.33, "lon": 44.38, "name": "Unit Two" }
-+  }
-+]
- 
-EOF
-)
+[
+  {
+    "id": 1,
+    "lat": 50.4501,
+    "lon": 30.5234,
+    "title": "Conflict in Ukraine",
+    "description": "Ongoing clashes in Eastern Ukraine",
+    "country": "Ukraine",
+    "year": 2026,
+    "actor1": { "lat": 50.45, "lon": 30.52, "name": "Side A" },
+    "actor2": { "lat": 50.46, "lon": 30.53, "name": "Side B" }
+  },
+  {
+    "id": 2,
+    "lat": 34.0522,
+    "lon": -118.2437,
+    "title": "Conflict in USA",
+    "description": "Minor conflict example",
+    "country": "USA",
+    "year": 2026,
+    "actor1": { "lat": 34.05, "lon": -118.24, "name": "Group X" },
+    "actor2": { "lat": 34.06, "lon": -118.25, "name": "Group Y" }
+  },
+  {
+    "id": 3,
+    "lat": 31.7683,
+    "lon": 35.2137,
+    "title": "Conflict in Israel",
+    "description": "Escalation near urban areas",
+    "country": "Israel",
+    "year": 2025,
+    "actor1": { "lat": 31.76, "lon": 35.20, "name": "Force Alpha" },
+    "actor2": { "lat": 31.78, "lon": 35.22, "name": "Force Beta" }
+  },
+  {
+    "id": 4,
+    "lat": 15.5007,
+    "lon": 32.5599,
+    "title": "Conflict in Sudan",
+    "description": "Armed clashes reported in Khartoum",
+    "country": "Sudan",
+    "year": 2024,
+    "actor1": { "lat": 15.49, "lon": 32.54, "name": "Faction North" },
+    "actor2": { "lat": 15.52, "lon": 32.57, "name": "Faction South" }
+  },
+  {
+    "id": 5,
+    "lat": 33.3152,
+    "lon": 44.3661,
+    "title": "Conflict in Iraq",
+    "description": "Localized militant activity",
+    "country": "Iraq",
+    "year": 2023,
+    "actor1": { "lat": 33.31, "lon": 44.35, "name": "Unit One" },
+    "actor2": { "lat": 33.33, "lon": 44.38, "name": "Unit Two" }
+  }
+]
+
