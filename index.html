@@ -1,27 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Global War Tracker</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global War Tracker</title>
 
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-</head>
-<body>
+    <!-- Leaflet core -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
 
-<h1>Global War Tracker</h1>
-<div id="counter"></div>
+    <!-- Leaflet full-screen control -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.fullscreen@2.4.0/Control.FullScreen.css"
+    />
 
-<div id="timeline">
-    <label for="yearRange">Filter by year: </label>
-    <input type="range" id="yearRange" min="2000" max="2025" value="2025">
-    <span id="yearLabel">2025</span>
-</div>
+    <!-- App styles -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div class="hero__content">
+          <p class="eyebrow">Global Security Dashboard</p>
+          <h1>Global War Tracker</h1>
+          <p class="subtitle">
+            Live conflict mapping and timeline analysis powered by LiveUAMap.
+          </p>
+        </div>
 
-<div id="map"></div>
+        <section class="peace-counter" aria-live="polite">
+          <p class="counter-label">Days Without Major War</p>
+          <p id="daysCounter" class="counter-value">--</p>
+          <p id="counterMeta" class="counter-meta">
+            Calculating from the latest major-war reference date.
+          </p>
+        </section>
+      </header>
 
-<script src="script.js"></script>
-</body>
+      <section class="controls" aria-label="Timeline filters">
+        <div class="control-group">
+          <label for="yearSlider">Filter by year</label>
+          <input
+            id="yearSlider"
+            type="range"
+            min="2014"
+            max="2030"
+            value="2024"
+            step="1"
+          />
+        </div>
+        <div class="control-group control-group--readout">
+          <span>Selected Year</span>
+          <strong id="yearOutput">2024</strong>
+        </div>
+        <button id="resetFiltersBtn" class="btn">Show Latest Year</button>
+      </section>
+
+      <section class="stats-grid" aria-label="Conflict metrics">
+        <article class="stat-card">
+          <h2>Visible Events</h2>
+          <p id="visibleCount">0</p>
+        </article>
+        <article class="stat-card">
+          <h2>Data Source</h2>
+          <p id="sourceStatus">Connecting…</p>
+        </article>
+        <article class="stat-card">
+          <h2>Last Updated</h2>
+          <p id="lastUpdated">--</p>
+        </article>
+      </section>
+
+      <section class="map-panel">
+        <div id="map" aria-label="Interactive global conflict map"></div>
+      </section>
+
+      <section class="notes">
+        <h2>Developer Notes</h2>
+        <ul>
+          <li>
+            This app fetches conflict data from <code>https://liveuamap.com/api/events</code>
+            directly in the browser for GitHub Pages compatibility.
+          </li>
+          <li>
+            To switch data providers later, update <code>API_ENDPOINTS</code> and
+            <code>normalizeEvent()</code> in <code>script.js</code>.
+          </li>
+          <li>
+            If provider fields change, map new keys in
+            <code>normalizeEvent()</code> and adjust popup rendering in
+            <code>renderMarkers()</code>.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <!-- Leaflet core -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <!-- Leaflet plugins: heatmap + arrowheads + fullscreen -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://unpkg.com/leaflet-arrowheads@1.3.0/lib/index.js"></script>
+    <script src="https://unpkg.com/leaflet.fullscreen@2.4.0/Control.FullScreen.js"></script>
+
+    <!-- App script -->
+    <script src="script.js"></script>
+  </body>
 </html>
