@@ -1,129 +1,24 @@
-// script.js — Global Conflict Tracker
-const CONFLICTS_URL = "https://raw.githubusercontent.com/anchpav/war-map/main/conflicts.json";
-
-// Инициализация карты
-const map = L.map("map").setView([20, 0], 2);
-
-// Базовый слой
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap contributors",
-}).addTo(map);
-
-let markersLayer = L.layerGroup().addTo(map);
-let linesLayer = L.layerGroup().addTo(map);
-let heatLayer;
-
-// DOM элементы
-const yearFilter = document.getElementById("yearFilter");
-const yearLabel = document.getElementById("yearLabel");
-const yearReset = document.getElementById("yearReset");
-const countryFilter = document.getElementById("countryFilter");
-const visibleCount = document.getElementById("visibleCount");
-const dataUnavailable = document.getElementById("dataUnavailable");
-const sourceLabel = document.getElementById("sourceLabel");
-
-let conflictsData = [];
-
-// Fetch JSON
-fetch(CONFLICTS_URL)
-  .then(res => res.json())
-  .then(data => {
-    conflictsData = data;
-    dataUnavailable.hidden = true;
-    sourceLabel.textContent = "Online JSON";
-    populateCountryFilter();
-    setupYearFilter();
-    renderMap();
-  })
-  .catch(err => {
-    console.error("Failed to load conflicts:", err);
-    dataUnavailable.hidden = false;
-    sourceLabel.textContent = "Unavailable";
-  });
-
-// Создание списка стран для фильтра
-function populateCountryFilter() {
-  const countries = [...new Set(conflictsData.map(c => c.country))].sort();
-  countryFilter.innerHTML = "";
-  countries.forEach(country => {
-    const option = document.createElement("option");
-    option.value = country;
-    option.textContent = country;
-    countryFilter.appendChild(option);
-  });
-}
-
-// Настройка диапазона лет
-function setupYearFilter() {
-  const years = conflictsData.map(c => c.year).filter(y => Number.isFinite(y));
-  const minYear = Math.min(...years);
-  const maxYear = Math.max(...years);
-  yearFilter.min = minYear;
-  yearFilter.max = maxYear;
-  yearFilter.value = 0; // 0 = All
-  yearLabel.textContent = "All";
-}
-
-// Фильтрация и рендер карты
-function renderMap() {
-  markersLayer.clearLayers();
-  linesLayer.clearLayers();
-  if (heatLayer) map.removeLayer(heatLayer);
-
-  const selectedYear = parseInt(yearFilter.value) || null;
-  const selectedCountries = Array.from(countryFilter.selectedOptions).map(o => o.value);
-
-  const filtered = conflictsData.filter(c => {
-    const yearMatch = selectedYear ? c.year === selectedYear : true;
-    const countryMatch = selectedCountries.length ? selectedCountries.includes(c.country) : true;
-    return yearMatch && countryMatch;
-  });
-
-  const heatPoints = [];
-
-  filtered.forEach(c => {
-    // Маркер
-    const marker = L.circleMarker([c.lat, c.lon], {
-      radius: 6,
-      color: "#ff2a2a",
-      fillColor: "#ff2a2a",
-      fillOpacity: 0.9,
-      weight: 1
-    }).bindPopup(`
-      <b>${c.title}</b><br>
-      ${c.description}<br>
-      <i>${c.country}</i>
-    `);
-    markersLayer.addLayer(marker);
-
-    // Линия actor1 → actor2
-    if (c.actor1 && c.actor2) {
-      const line = L.polyline([
-        [c.actor1.lat, c.actor1.lon],
-        [c.actor2.lat, c.actor2.lon]
-      ], { color: 'yellow', weight: 2, opacity: 0.9 });
-      linesLayer.addLayer(line);
-    }
-
-    heatPoints.push([c.lat, c.lon, 0.8]);
-  });
-
-  heatLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15 }).addTo(map);
-
-  visibleCount.textContent = filtered.length;
-}
-
-// События фильтров
-yearFilter.addEventListener("input", () => {
-  const val = parseInt(yearFilter.value);
-  yearLabel.textContent = val || "All";
-  renderMap();
-});
-
-yearReset.addEventListener("click", () => {
-  yearFilter.value = 0;
-  yearLabel.textContent = "All";
-  renderMap();
-});
-
-countryFilter.addEventListener("change", () => renderMap());
+[
+  {
+    "id": 1,
+    "lat": 50.4501,
+    "lon": 30.5234,
+    "title": "Conflict in Ukraine",
+    "description": "Ongoing clashes in Eastern Ukraine",
+    "country": "Ukraine",
+    "year": 2026,
+    "actor1": { "lat": 50.45, "lon": 30.52, "name": "Side A" },
+    "actor2": { "lat": 50.46, "lon": 30.53, "name": "Side B" }
+  },
+  {
+    "id": 2,
+    "lat": 34.0522,
+    "lon": -118.2437,
+    "title": "Conflict in USA",
+    "description": "Minor conflict example",
+    "country": "USA",
+    "year": 2026,
+    "actor1": { "lat": 34.05, "lon": -118.24, "name": "Group X" },
+    "actor2": { "lat": 34.06, "lon": -118.25, "name": "Group Y" }
+  }
+]
