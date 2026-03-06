@@ -1,6 +1,4 @@
-// script.js
-
-
+// script.js — Global Conflict Tracker
 const CONFLICTS_URL = "https://raw.githubusercontent.com/anchpav/war-map/main/conflicts.json";
 
 // Инициализация карты
@@ -27,24 +25,26 @@ const sourceLabel = document.getElementById("sourceLabel");
 let conflictsData = [];
 
 // Fetch JSON
-fetch(DATA_URL)
+fetch(CONFLICTS_URL)
   .then(res => res.json())
   .then(data => {
     conflictsData = data;
-    dataUnavailable.classList.add("hidden");
-    sourceLabel.textContent = DATA_URL;
+    dataUnavailable.hidden = true;
+    sourceLabel.textContent = "Online JSON";
     populateCountryFilter();
+    setupYearFilter();
     renderMap();
   })
   .catch(err => {
     console.error("Failed to load conflicts:", err);
-    dataUnavailable.classList.remove("hidden");
+    dataUnavailable.hidden = false;
     sourceLabel.textContent = "Unavailable";
   });
 
 // Создание списка стран для фильтра
 function populateCountryFilter() {
   const countries = [...new Set(conflictsData.map(c => c.country))].sort();
+  countryFilter.innerHTML = "";
   countries.forEach(country => {
     const option = document.createElement("option");
     option.value = country;
@@ -53,13 +53,24 @@ function populateCountryFilter() {
   });
 }
 
+// Настройка диапазона лет
+function setupYearFilter() {
+  const years = conflictsData.map(c => c.year).filter(y => Number.isFinite(y));
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+  yearFilter.min = minYear;
+  yearFilter.max = maxYear;
+  yearFilter.value = 0; // 0 = All
+  yearLabel.textContent = "All";
+}
+
 // Фильтрация и рендер карты
 function renderMap() {
   markersLayer.clearLayers();
   linesLayer.clearLayers();
   if (heatLayer) map.removeLayer(heatLayer);
 
-  const selectedYear = parseInt(yearFilter.value);
+  const selectedYear = parseInt(yearFilter.value) || null;
   const selectedCountries = Array.from(countryFilter.selectedOptions).map(o => o.value);
 
   const filtered = conflictsData.filter(c => {
@@ -72,7 +83,13 @@ function renderMap() {
 
   filtered.forEach(c => {
     // Маркер
-    const marker = L.marker([c.lat, c.lon]).bindPopup(`
+    const marker = L.circleMarker([c.lat, c.lon], {
+      radius: 6,
+      color: "#ff2a2a",
+      fillColor: "#ff2a2a",
+      fillOpacity: 0.9,
+      weight: 1
+    }).bindPopup(`
       <b>${c.title}</b><br>
       ${c.description}<br>
       <i>${c.country}</i>
@@ -80,14 +97,15 @@ function renderMap() {
     markersLayer.addLayer(marker);
 
     // Линия actor1 → actor2
-    const line = L.polyline([
-      [c.actor1.lat, c.actor1.lon],
-      [c.actor2.lat, c.actor2.lon]
-    ], { color: 'yellow' });
-    linesLayer.addLayer(line);
+    if (c.actor1 && c.actor2) {
+      const line = L.polyline([
+        [c.actor1.lat, c.actor1.lon],
+        [c.actor2.lat, c.actor2.lon]
+      ], { color: 'yellow', weight: 2, opacity: 0.9 });
+      linesLayer.addLayer(line);
+    }
 
-    // Heatmap
-    heatPoints.push([c.lat, c.lon, 1]);
+    heatPoints.push([c.lat, c.lon, 0.8]);
   });
 
   heatLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15 }).addTo(map);
@@ -101,9 +119,11 @@ yearFilter.addEventListener("input", () => {
   yearLabel.textContent = val || "All";
   renderMap();
 });
+
 yearReset.addEventListener("click", () => {
   yearFilter.value = 0;
   yearLabel.textContent = "All";
   renderMap();
 });
+
 countryFilter.addEventListener("change", () => renderMap());
