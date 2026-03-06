@@ -1,1 +1,92 @@
+:root {
+  --bg: #0b1020;
+  --panel: #131d35;
+  --text: #ecf2ff;
+  --muted: #adc0ea;
+  --accent: #7bd7ff;
+}
 
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, Segoe UI, Arial, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top right, #1b2f5f 0%, #0b1020 55%, #070b16 100%);
+}
+
+.app {
+  width: min(1200px, 95vw);
+  margin: 1rem auto 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.header,
+.controls,
+.stats,
+.map-wrap,
+.data-unavailable {
+  background: linear-gradient(180deg, rgba(19, 29, 53, 0.97), rgba(13, 21, 39, 0.97));
+  border: 1px solid rgba(123, 215, 255, 0.2);
+  border-radius: 14px;
+}
+
+.header { padding: 1rem 1.2rem; }
+.header h1 { margin: 0 0 0.35rem; }
+.header p { margin: 0; color: var(--muted); }
+
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+}
+
+.control { display: grid; gap: 0.5rem; }
+.control label { color: var(--muted); }
+.hint { margin: 0; color: var(--muted); font-size: 0.85rem; }
+
+#yearFilter { width: 100%; accent-color: var(--accent); }
+#countryFilter {
+  width: 100%;
+  background: #0d1528;
+  color: var(--text);
+  border: 1px solid rgba(123, 215, 255, 0.25);
+  border-radius: 8px;
+  padding: 0.35rem;
+}
+
+.btn {
+  justify-self: start;
+  border: 1px solid rgba(123, 215, 255, 0.3);
+  background: rgba(123, 215, 255, 0.15);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+}
+
+.card h2 { margin: 0; font-size: 0.9rem; color: var(--muted); }
+.card p { margin: 0.4rem 0 0; font-size: 1.5rem; font-weight: 700; }
+
+#map { height: min(68vh, 680px); width: 100%; border-radius: 14px; }
+
+.data-unavailable {
+  padding: 1rem 1.2rem;
+  border-color: rgba(255, 90, 90, 0.4);
+}
+
+.data-unavailable h2 { margin-top: 0; color: #ff8d8d; }
+
+@media (max-width: 900px) {
+  .controls, .stats { grid-template-columns: 1fr; }
+  #map { height: 58vh; }
+}
