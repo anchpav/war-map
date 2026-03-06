@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Global Conflict Tracker</title>
 
-    <!-- Leaflet CSS -->
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -22,39 +21,19 @@
       </header>
 
       <section class="controls" aria-label="Filters">
-        <!-- Year Filter -->
         <div class="control">
-          <label for="yearFilter">
-            Year: <strong id="yearLabel">All</strong>
-          </label>
-          <input
-            id="yearFilter"
-            type="range"
-            min="2020"
-            max="2030"
-            value="2030"
-            step="1"
-          />
+          <label for="yearFilter">Year: <strong id="yearLabel">All</strong></label>
+          <input id="yearFilter" type="range" min="2020" max="2030" value="2030" step="1" />
           <button id="yearReset" class="btn">Show all years</button>
         </div>
 
-        <!-- Country Filter -->
         <div class="control">
           <label for="countryFilter">Countries (multi-select)</label>
-          <select
-            id="countryFilter"
-            multiple
-            size="6"
-            aria-label="Country multi-select"
-          ></select>
-          <p class="hint">
-            Tip: Ctrl/Cmd + click for multiple countries. If nothing selected,
-            all countries are shown.
-          </p>
+          <select id="countryFilter" multiple size="6" aria-label="Country multi-select"></select>
+          <p class="hint">Tip: Ctrl/Cmd + click for multiple countries. If nothing selected, all countries are shown.</p>
         </div>
       </section>
 
-      <!-- Stats -->
       <section class="stats">
         <div class="card">
           <h2>Visible Conflicts</h2>
@@ -66,22 +45,16 @@
         </div>
       </section>
 
-      <!-- Map Container -->
       <section id="mapWrap" class="map-wrap">
         <div id="map"></div>
       </section>
 
-      <!-- Data Unavailable -->
-      <section id="dataUnavailable" class="data-unavailable hidden">
+      <section id="dataUnavailable" class="data-unavailable" hidden>
         <h2>Data unavailable</h2>
-        <p>
-          Could not load online JSON source. Please check the URL/network and
-          try again.
-        </p>
+        <p>Could not load online JSON source. Please check the URL/network and try again.</p>
       </section>
     </main>
 
-    <!-- Leaflet JS -->
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
