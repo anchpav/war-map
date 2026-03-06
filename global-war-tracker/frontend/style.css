@@ -1,0 +1,113 @@
+/*
+  GLOBAL WAR TRACKER styles
+  Dark minimal dashboard with clear status colors.
+*/
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --text: #f0f6fc;
+  --muted: #9ba9b4;
+  --red: #ff4d4d;
+  --orange: #ff9f43;
+  --gray: #a0a0a0;
+  --border: #2f3a47;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header,
+main {
+  width: min(1200px, 95vw);
+  margin: 0 auto;
+}
+
+header {
+  padding: 1rem 0;
+}
+
+.stats-panel,
+.filters,
+.analytics {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-panel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.stat-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.stat-card h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.stat-card p {
+  margin: 0.5rem 0 0;
+  font-size: 1.7rem;
+  font-weight: bold;
+}
+
+.highlight p {
+  color: var(--orange);
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+
+#countryFilter {
+  width: 100%;
+  min-height: 80px;
+  background: #0f141b;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+button {
+  background: #223146;
+  color: var(--text);
+  border: 1px solid #385074;
+  border-radius: 8px;
+  padding: 0.6rem;
+  cursor: pointer;
+}
+
+#map {
+  height: 65vh;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .stats-panel,
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}
