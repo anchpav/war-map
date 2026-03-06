@@ -4,11 +4,11 @@
 
 // NOTE FOR FUTURE DATA SOURCE CHANGES:
 // 1) Update API_ENDPOINTS with your new URL(s).
-// 2) Update normalizeEvent() to map provider fields into the standard shape.
-// 3) Keep renderMarkers(), buildHeatPoints() and filtering logic unchanged where possible.
+// 2) Update normalizeEvent() and extractEventList() to map provider fields.
+// 3) Keep renderMarkers(), buildHeatPoints(), and filtering logic unchanged where possible.
 const API_ENDPOINTS = [
   "https://liveuamap.com/api/events",
-  // Fallback mirror for CORS-restricted environments (still fetches the same source URL)
+  // Fallback mirror for CORS-restricted environments (same source URL)
   "https://api.allorigins.win/raw?url=https://liveuamap.com/api/events"
 ];
 
@@ -20,7 +20,8 @@ const state = {
   markersLayer: null,
   linksLayer: null,
   heatLayer: null,
-  map: null
+  map: null,
+  showAllYears: true
 };
 
 const refs = {
@@ -119,11 +120,9 @@ async function loadConflictData() {
   }
 
   if (!events.length) {
-    refs.sourceStatus.textContent = "Unavailable";
+    refs.sourceStatus.textContent = "Unavailable (check network/CORS)";
     refs.lastUpdated.textContent = "--";
-    alert(
-      "Could not load LiveUAMap events right now. Check CORS/network access and try again."
-    );
+    refs.visibleCount.textContent = "0";
     return;
   }
 
@@ -131,10 +130,16 @@ async function loadConflictData() {
     .map(normalizeEvent)
     .filter((event) => Number.isFinite(event.lat) && Number.isFinite(event.lng));
 
-  const latestYear = getLatestEventYear(state.rawEvents) || new Date().getUTCFullYear();
-  refs.yearSlider.max = String(latestYear);
-  refs.yearSlider.value = String(latestYear);
-  refs.yearOutput.textContent = String(latestYear);
+  const [minYear, maxYear] = getYearRange(state.rawEvents);
+  refs.yearSlider.min = String(minYear || new Date().getUTCFullYear());
+  refs.yearSlider.max = String(maxYear || new Date().getUTCFullYear());
+  refs.yearSlider.value = String(maxYear || new Date().getUTCFullYear());
+
+  // IMPORTANT: default mode is ALL years so the map shows all actual current conflicts.
+  state.showAllYears = true;
+  refs.allYearsToggle.checked = true;
+  applyYearControlState();
+
   refs.sourceStatus.textContent = usedEndpoint.includes("allorigins")
     ? "LiveUAMap (via mirror)"
     : "LiveUAMap API";
@@ -144,32 +149,56 @@ async function loadConflictData() {
   applyFiltersAndRender();
 }
 
+function extractEventList(payload) {
+  // LiveUAMap or mirrors may wrap lists under different keys.
+  if (Array.isArray(payload)) return payload;
+
+  const candidateKeys = ["events", "data", "items", "results", "features"];
+  for (const key of candidateKeys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+    if (Array.isArray(payload?.data?.[key])) return payload.data[key];
+  }
+
+  return [];
+}
+
 function normalizeEvent(item) {
   // Many providers use differing keys; this function standardizes them.
-  const lat = Number(item.lat ?? item.latitude ?? item.geo_lat ?? item?.location?.lat);
-  const lng = Number(item.lng ?? item.lon ?? item.longitude ?? item.geo_lon ?? item?.location?.lng);
+  const lat = parseCoord(
+    item.lat ?? item.latitude ?? item.geo_lat ?? item?.location?.lat ?? item?.geo?.lat
+  );
+  const lng = parseCoord(
+    item.lng ?? item.lon ?? item.long ?? item.longitude ?? item.geo_lon ?? item?.location?.lng ?? item?.geo?.lon
+  );
 
-  const title = item.title || item.name || "Untitled conflict event";
+  // GeoJSON fallback: coordinates usually [lng, lat]
+  const geoLng = parseCoord(item?.geometry?.coordinates?.[0]);
+  const geoLat = parseCoord(item?.geometry?.coordinates?.[1]);
+
+  const finalLat = Number.isFinite(lat) ? lat : geoLat;
+  const finalLng = Number.isFinite(lng) ? lng : geoLng;
+
+  const title = item.title || item.name || item?.properties?.title || "Untitled conflict event";
   const description =
-    item.description || item.text || item.content || "No detailed description available.";
+    item.description || item.text || item.content || item?.properties?.description || "No detailed description available.";
   const region =
-    item.country || item.region || item.location || item.place || item.city || "Unknown region";
+    item.country || item.region || item.location || item.place || item.city || item?.properties?.country || "Unknown region";
 
   const dateRaw =
-    item.date || item.datetime || item.published_at || item.created_at || item.time || null;
+    item.date || item.datetime || item.published_at || item.created_at || item.time || item?.properties?.date || null;
   const date = parseMaybeDate(dateRaw);
 
   const sideA = item.sideA || item.source || item.attacker || null;
   const sideB = item.sideB || item.target || item.defender || null;
-  const toLat = Number(item.to_lat ?? item.target_lat ?? item.destination_lat);
-  const toLng = Number(item.to_lng ?? item.target_lng ?? item.destination_lng);
+  const toLat = parseCoord(item.to_lat ?? item.target_lat ?? item.destination_lat);
+  const toLng = parseCoord(item.to_lng ?? item.target_lng ?? item.destination_lng);
 
   // intensity may be numeric or inferred from fields like casualties/severity/category
   const intensity = inferIntensity(item);
 
   return {
-    lat,
-    lng,
+    lat: finalLat,
+    lng: finalLng,
     toLat,
     toLng,
     title,
@@ -192,7 +221,7 @@ function inferIntensity(item) {
     return clamp(Math.log10(casualties + 1) / 2, 0.2, 1);
   }
 
-  const text = String(item.category || item.type || "").toLowerCase();
+  const text = String(item.category || item.type || item?.properties?.category || "").toLowerCase();
   if (text.includes("airstrike") || text.includes("missile") || text.includes("battle")) {
     return 0.9;
   }
@@ -207,6 +236,7 @@ function applyFiltersAndRender() {
   const selectedYear = Number(refs.yearSlider.value);
 
   state.filteredEvents = state.rawEvents.filter((event) => {
+    if (state.showAllYears) return true;
     if (!event.date) return true;
     return event.date.getUTCFullYear() === selectedYear;
   });
@@ -273,6 +303,13 @@ function renderHeatmap(events) {
   }
 
   const heatPoints = buildHeatPoints(events);
+
+  // Plugin might fail to load on restricted networks: guard to avoid runtime crash.
+  if (typeof L.heatLayer !== "function") {
+    state.heatLayer = null;
+    return;
+  }
+
   state.heatLayer = L.heatLayer(heatPoints, {
     radius: 26,
     blur: 20,
@@ -291,19 +328,34 @@ function buildHeatPoints(events) {
   return events.map((event) => [event.lat, event.lng, clamp(event.intensity, 0.2, 1)]);
 }
 
-function getLatestEventYear(events) {
+function getYearRange(events) {
   const years = events
     .map((event) => event.date?.getUTCFullYear())
     .filter((year) => Number.isFinite(year));
 
-  if (!years.length) return null;
-  return Math.max(...years);
+  if (!years.length) return [null, null];
+  return [Math.min(...years), Math.max(...years)];
 }
 
 function parseMaybeDate(value) {
   if (!value) return null;
+
+  if (Number.isFinite(Number(value)) && String(value).length <= 13) {
+    const ms = String(value).length <= 10 ? Number(value) * 1000 : Number(value);
+    const asEpoch = new Date(ms);
+    if (!Number.isNaN(asEpoch.getTime())) return asEpoch;
+  }
+
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseCoord(value) {
+  if (value === null || value === undefined) return NaN;
+  if (typeof value === "number") return value;
+  const normalized = String(value).trim().replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : NaN;
 }
 
 function formatDateTime(date) {

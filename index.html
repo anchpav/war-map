@@ -56,9 +56,13 @@
         </div>
         <div class="control-group control-group--readout">
           <span>Selected Year</span>
-          <strong id="yearOutput">2024</strong>
+          <strong id="yearOutput">All years</strong>
         </div>
-        <button id="resetFiltersBtn" class="btn">Show Latest Year</button>
+        <label class="all-years-toggle">
+          <input id="allYearsToggle" type="checkbox" checked />
+          <span>Show all years</span>
+        </label>
+        <button id="resetFiltersBtn" class="btn">Reset filters</button>
       </section>
 
       <section class="stats-grid" aria-label="Conflict metrics">

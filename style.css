@@ -106,7 +106,7 @@ h1 {
   padding: 0.95rem 1rem;
   display: grid;
   gap: 1rem;
-  grid-template-columns: 2fr auto auto;
+  grid-template-columns: 2fr auto auto auto;
   align-items: end;
 }
 
@@ -130,6 +130,24 @@ h1 {
   font-size: 1.2rem;
 }
 
+
+
+.all-years-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.all-years-toggle input {
+  accent-color: var(--accent);
+}
+
+#yearSlider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .btn {
   border: 1px solid rgba(104, 213, 255, 0.35);
   background: rgba(104, 213, 255, 0.12);
