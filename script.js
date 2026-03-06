@@ -1,71 +1,59 @@
-// ====== Локальные данные конфликтов ======
-const conflictsData = [
-  {id:1, lat:50.4501, lon:30.5234, title:"Conflict in Ukraine", description:"Ongoing clashes in Eastern Ukraine", country:"Ukraine", year:2026, actor1:{lat:50.45, lon:30.52, name:"Side A"}, actor2:{lat:50.46, lon:30.53, name:"Side B"}},
-  {id:2, lat:31.7683, lon:35.2137, title:"Conflict in Israel", description:"Escalation near urban areas", country:"Israel", year:2025, actor1:{lat:31.76, lon:35.20, name:"Force Alpha"}, actor2:{lat:31.78, lon:35.22, name:"Force Beta"}},
-  {id:3, lat:34.0522, lon:-118.2437, title:"Conflict in USA", description:"Minor conflict example", country:"USA", year:2026, actor1:{lat:34.05, lon:-118.24, name:"Group X"}, actor2:{lat:34.06, lon:-118.25, name:"Group Y"}}
-];
+const DATA_URL = "./conflicts.json";
 
-// ====== Настройка карты ======
 const map = L.map("map").setView([20, 0], 2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution:"© OpenStreetMap contributors"
+  attribution: "© OpenStreetMap contributors"
 }).addTo(map);
 
 let markersLayer = L.layerGroup().addTo(map);
 let linesLayer = L.layerGroup().addTo(map);
 let heatLayer;
 
-// DOM
 const yearFilter = document.getElementById("yearFilter");
 const yearLabel = document.getElementById("yearLabel");
 const yearReset = document.getElementById("yearReset");
 const countryFilter = document.getElementById("countryFilter");
 const visibleCount = document.getElementById("visibleCount");
-const daysWithoutWar = document.getElementById("daysWithoutWar");
+const daysWithout = document.getElementById("daysWithout");
+const dataUnavailable = document.getElementById("dataUnavailable");
 const sourceLabel = document.getElementById("sourceLabel");
 
-// ====== Инициализация ======
-populateCountryFilter();
-renderMap();
-updateDaysWithoutWar();
+let conflictsData = [];
 
-// ====== Фильтры ======
-yearFilter.addEventListener("input", () => {
-  yearLabel.textContent = yearFilter.value || "All";
-  renderMap();
-  updateDaysWithoutWar();
-});
+// Load JSON
+fetch(DATA_URL)
+  .then(res => res.json())
+  .then(data => {
+    conflictsData = data;
+    dataUnavailable.hidden = true;
+    sourceLabel.textContent = "Local JSON";
+    populateCountryFilter();
+    renderMap();
+  })
+  .catch(err => {
+    console.error("Failed to load conflicts:", err);
+    dataUnavailable.hidden = false;
+    sourceLabel.textContent = "Unavailable";
+  });
 
-yearReset.addEventListener("click", () => {
-  yearFilter.value = 0;
-  yearLabel.textContent = "All";
-  renderMap();
-  updateDaysWithoutWar();
-});
-
-countryFilter.addEventListener("change", () => {
-  renderMap();
-  updateDaysWithoutWar();
-});
-
-// ====== Создаем список стран ======
+// Populate countries
 function populateCountryFilter() {
   const countries = [...new Set(conflictsData.map(c => c.country))].sort();
-  countries.forEach(c => {
+  countries.forEach(country => {
     const option = document.createElement("option");
-    option.value = c;
-    option.textContent = c;
+    option.value = country;
+    option.textContent = country;
     countryFilter.appendChild(option);
   });
 }
 
-// ====== Рендер карты ======
+// Render map
 function renderMap() {
   markersLayer.clearLayers();
   linesLayer.clearLayers();
   if (heatLayer) map.removeLayer(heatLayer);
 
-  const selectedYear = parseInt(yearFilter.value);
+  const selectedYear = parseInt(yearFilter.value) || null;
   const selectedCountries = Array.from(countryFilter.selectedOptions).map(o => o.value);
 
   const filtered = conflictsData.filter(c => {
@@ -75,29 +63,45 @@ function renderMap() {
   });
 
   filtered.forEach(c => {
-    L.marker([c.lat, c.lon]).bindPopup(`<b>${c.title}</b><br>${c.description}<br><i>${c.country}</i>`).addTo(markersLayer);
-    L.polyline([[c.actor1.lat, c.actor1.lon],[c.actor2.lat, c.actor2.lon]],{color:'yellow'}).addTo(linesLayer);
+    const marker = L.marker([c.lat, c.lon]).bindPopup(`
+      <b>${c.title}</b><br>${c.description}<br><i>${c.country}</i>
+    `);
+    markersLayer.addLayer(marker);
+
+    if (c.actor1 && c.actor2) {
+      const line = L.polyline([[c.actor1.lat, c.actor1.lon],[c.actor2.lat, c.actor2.lon]], {color: 'yellow'});
+      linesLayer.addLayer(line);
+    }
   });
 
-  const heatPoints = filtered.map(c => [c.lat,c.lon,1]);
-  heatLayer = L.heatLayer(heatPoints,{radius:25,blur:15}).addTo(map);
+  const heatPoints = filtered.map(c => [c.lat, c.lon, 1]);
+  heatLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15 }).addTo(map);
 
   visibleCount.textContent = filtered.length;
-}
 
-// ====== Счётчик дней без войны ======
-function updateDaysWithoutWar() {
-  const selectedCountries = Array.from(countryFilter.selectedOptions).map(o => o.value);
-  const filtered = conflictsData.filter(c => selectedCountries.length ? selectedCountries.includes(c.country) : true);
+  // Days without war
+  const lastConflictDate = filtered.reduce((latest, c) => {
+    const d = new Date(c.date);
+    return (!latest || d > latest) ? d : latest;
+  }, null);
 
-  if (filtered.length === 0) {
-    daysWithoutWar.textContent = "--";
-    return;
+  if (lastConflictDate) {
+    const now = new Date();
+    const diffDays = Math.floor((now - lastConflictDate) / (1000*60*60*24));
+    daysWithout.textContent = diffDays;
+  } else {
+    daysWithout.textContent = "--";
   }
-
-  const latestConflictDate = Math.max(...filtered.map(c => c.year));
-  const today = new Date();
-  // грубая оценка: разница лет * 365
-  const days = Math.floor((today.getFullYear() - latestConflictDate) * 365);
-  daysWithoutWar.textContent = days;
 }
+
+// Event listeners
+yearFilter.addEventListener("input", () => {
+  yearLabel.textContent = parseInt(yearFilter.value) || "All";
+  renderMap();
+});
+yearReset.addEventListener("click", () => {
+  yearFilter.value = 0;
+  yearLabel.textContent = "All";
+  renderMap();
+});
+countryFilter.addEventListener("change", () => renderMap());
