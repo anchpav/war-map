@@ -1,0 +1,82 @@
+[
+  {
+    "id": "russia-ukraine-war",
+    "name": "Russia Ukraine War",
+    "country": "Ukraine",
+    "lat": 50.45,
+    "lon": 30.52,
+    "start": "2022-02-24",
+    "end": null,
+    "description": "Full scale invasion and continuing hostilities."
+  },
+  {
+    "id": "syrian-civil-war",
+    "name": "Syrian Civil War",
+    "country": "Syria",
+    "lat": 33.51,
+    "lon": 36.29,
+    "start": "2011-03-15",
+    "end": null,
+    "description": "Multi-sided civil war with intermittent escalations."
+  },
+  {
+    "id": "nagorno-karabakh-2020",
+    "name": "Nagorno-Karabakh War",
+    "country": "Azerbaijan",
+    "lat": 39.82,
+    "lon": 46.75,
+    "start": "2020-09-27",
+    "end": "2020-11-10",
+    "description": "Major escalation between Azerbaijan and Armenia."
+  },
+  {
+    "id": "gulf-war",
+    "name": "Gulf War",
+    "country": "Iraq",
+    "lat": 29.31,
+    "lon": 47.48,
+    "start": "1990-08-02",
+    "end": "1991-02-28",
+    "description": "Coalition military operation after invasion of Kuwait."
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Missile attack reported near key border city as ceasefire fails"
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Government announces military strike after armed clash in northern region"
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Peace talks continue with no signs of invasion in neighboring state"
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Aid convoys delayed after war escalates around contested province"
+  }
+]
