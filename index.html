@@ -4,20 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Global Conflict Tracker</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
 </head>
 <body>
   <main class="app">
     <header class="header">
       <h1>Global Conflict Tracker</h1>
-      <p>Interactive Leaflet map with live JSON loading, timeline, country filters, heatmap and events table.</p>
+      <p>Interactive Leaflet map with local JSON data, timeline, and country filters.</p>
     </header>
 
     <section class="controls">
       <div class="control">
         <label for="yearFilter">Year: <strong id="yearLabel">All</strong></label>
-        <input type="range" id="yearFilter" min="2020" max="2030" step="1">
+        <input id="yearFilter" type="range" min="2020" max="2030" value="2030">
         <button id="yearReset" class="btn">Show all years</button>
       </div>
       <div class="control">
@@ -34,35 +38,20 @@
       </div>
       <div class="card">
         <h2>Days Without War</h2>
-        <p id="daysWithoutWar">0</p>
+        <p id="daysWithoutWar">--</p>
       </div>
       <div class="card">
         <h2>Source</h2>
-        <p id="sourceLabel">Loading…</p>
+        <p id="sourceLabel">Local JSON</p>
       </div>
     </section>
 
     <section id="mapWrap" class="map-wrap">
       <div id="map"></div>
     </section>
-
-    <section class="data-unavailable" id="dataUnavailable" hidden>
-      <h2>Data unavailable</h2>
-      <p>Could not load online JSON source. Please check the URL/network and try again.</p>
-    </section>
-
-    <section class="events-table">
-      <h2>Conflict Events</h2>
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Country</th><th>Title</th></tr>
-        </thead>
-        <tbody id="eventsTableBody"></tbody>
-      </table>
-    </section>
   </main>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <script src="script.js"></script>
 </body>
