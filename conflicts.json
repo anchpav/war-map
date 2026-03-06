@@ -6,30 +6,30 @@
     "title": "Conflict in Ukraine",
     "description": "Ongoing clashes in Eastern Ukraine",
     "country": "Ukraine",
-    "year": 2026,
+    "date": "2026-02-25",
     "actor1": { "lat": 50.45, "lon": 30.52, "name": "Side A" },
     "actor2": { "lat": 50.46, "lon": 30.53, "name": "Side B" }
   },
   {
     "id": 2,
-    "lat": 31.7683,
-    "lon": 35.2137,
-    "title": "Conflict in Israel",
-    "description": "Escalation near urban areas",
-    "country": "Israel",
-    "year": 2025,
-    "actor1": { "lat": 31.76, "lon": 35.20, "name": "Force Alpha" },
-    "actor2": { "lat": 31.78, "lon": 35.22, "name": "Force Beta" }
-  },
-  {
-    "id": 3,
     "lat": 34.0522,
     "lon": -118.2437,
     "title": "Conflict in USA",
     "description": "Minor conflict example",
     "country": "USA",
-    "year": 2026,
+    "date": "2026-01-12",
     "actor1": { "lat": 34.05, "lon": -118.24, "name": "Group X" },
     "actor2": { "lat": 34.06, "lon": -118.25, "name": "Group Y" }
+  },
+  {
+    "id": 3,
+    "lat": 31.7683,
+    "lon": 35.2137,
+    "title": "Conflict in Israel",
+    "description": "Escalation near urban areas",
+    "country": "Israel",
+    "date": "2025-11-10",
+    "actor1": { "lat": 31.76, "lon": 35.20, "name": "Force Alpha" },
+    "actor2": { "lat": 31.78, "lon": 35.22, "name": "Force Beta" }
   }
 ]
