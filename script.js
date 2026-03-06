@@ -30,7 +30,6 @@ const refs = {
   yearSlider: document.getElementById("yearSlider"),
   yearOutput: document.getElementById("yearOutput"),
   resetFiltersBtn: document.getElementById("resetFiltersBtn"),
-  allYearsToggle: document.getElementById("allYearsToggle"),
   visibleCount: document.getElementById("visibleCount"),
   sourceStatus: document.getElementById("sourceStatus"),
   lastUpdated: document.getElementById("lastUpdated")
@@ -66,13 +65,10 @@ function initMap() {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(state.map);
 
-  // Plugin might fail to load on restricted networks: guard to avoid runtime crash.
-  if (L.control && typeof L.control.fullscreen === "function") {
-    L.control.fullscreen({
-      position: "topleft",
-      title: "Full Screen"
-    }).addTo(state.map);
-  }
+  L.control.fullscreen({
+    position: "topleft",
+    title: "Full Screen"
+  }).addTo(state.map);
 
   state.markersLayer = L.layerGroup().addTo(state.map);
   state.linksLayer = L.layerGroup().addTo(state.map);
@@ -81,29 +77,16 @@ function initMap() {
 function wireControls() {
   refs.yearSlider.addEventListener("input", (event) => {
     const year = Number(event.target.value);
-    refs.yearOutput.textContent = String(year);
-    state.showAllYears = false;
-    refs.allYearsToggle.checked = false;
-    applyFiltersAndRender();
-  });
-
-  refs.allYearsToggle.addEventListener("change", (event) => {
-    state.showAllYears = event.target.checked;
-    applyYearControlState();
+    refs.yearOutput.textContent = year;
     applyFiltersAndRender();
   });
 
   refs.resetFiltersBtn.addEventListener("click", () => {
-    state.showAllYears = true;
-    refs.allYearsToggle.checked = true;
-    applyYearControlState();
+    const latestYear = getLatestEventYear(state.rawEvents) || new Date().getUTCFullYear();
+    refs.yearSlider.value = String(latestYear);
+    refs.yearOutput.textContent = String(latestYear);
     applyFiltersAndRender();
   });
-}
-
-function applyYearControlState() {
-  refs.yearSlider.disabled = state.showAllYears;
-  refs.yearOutput.textContent = state.showAllYears ? "All years" : String(refs.yearSlider.value);
 }
 
 async function loadConflictData() {
@@ -120,7 +103,11 @@ async function loadConflictData() {
       }
 
       const payload = await response.json();
-      const list = extractEventList(payload);
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.events)
+          ? payload.events
+          : [];
 
       if (list.length > 0) {
         events = list;
