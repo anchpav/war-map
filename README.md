@@ -1,37 +1,65 @@
-# Global War Tracker
+# Global Conflict Tracker (GitHub Pages)
 
-A static, GitHub Pages-ready web app that visualizes live conflict events on an interactive Leaflet map.
+Static web project that displays global conflict events on a Leaflet map with no server-side code.
 
-## Features
+## What it does
 
-- **Days Without Major War** counter based on a configurable reference date.
-- **Interactive world map** (zoom, pan, popups).
-- **Live conflict markers** loaded dynamically from `https://liveuamap.com/api/events`.
-- **Directional lines/arrows** when source/target coordinates are available.
-- **Heatmap overlay** showing relative conflict intensity.
-- **Timeline year slider** for quick event filtering.
-- Modern, responsive dark-theme interface.
+- Loads conflict data with `fetch()` from an **online JSON URL** (`CONFLICTS_URL` in `script.js`).
+- Uses a **local fallback** (`conflicts.json`) for testing/demo reliability.
+- Renders:
+  - red conflict markers,
+  - yellow lines between `actor1` and `actor2`,
+  - heatmap overlay,
+  - popup with title, description, country.
+- Provides filters:
+  - year range filter,
+  - dynamic country multi-select (all countries discovered from JSON).
+- Shows **"Data unavailable"** if the online/local JSON cannot be loaded.
 
-## Local Run
+## Files
 
-Because this app fetches remote JSON, run it from a local HTTP server (not `file://`):
+- `index.html`
+- `style.css`
+- `script.js`
+- `conflicts.json` (sample, 5+ countries)
+
+## Configure your online source
+
+In `script.js`:
+
+```js
+const CONFLICTS_URL = "https://raw.githubusercontent.com/USERNAME/repo/main/conflicts.json";
+const CONFLICTS_FALLBACK_URL = "./conflicts.json";
+```
+
+Replace `CONFLICTS_URL` with your real raw JSON URL.
+
+Expected JSON item shape:
+
+```json
+{
+  "id": 1,
+  "lat": 50.4501,
+  "lon": 30.5234,
+  "title": "Conflict in Country A",
+  "description": "Ongoing clashes",
+  "country": "Country A",
+  "year": 2026,
+  "actor1": {"lat": 50.45, "lon": 30.52, "name": "Side A"},
+  "actor2": {"lat": 50.46, "lon": 30.53, "name": "Side B"}
+}
+```
+
+## Run locally
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Then open: `http://localhost:8080`
+Open: `http://localhost:8080`
 
-## Data Source Maintenance
+## GitHub Pages
 
-If LiveUAMap changes schema or you want a different provider:
-
-1. Update `API_ENDPOINTS` in `script.js`.
-2. Map provider fields in `normalizeEvent()` to the app's standard event shape.
-3. Keep rendering functions (`renderMarkers`, `renderHeatmap`) as-is whenever possible.
-
-## GitHub Pages Deployment
-
-1. Push this repository to GitHub.
-2. In repository settings, enable **Pages** and select the branch root.
-3. Visit the generated Pages URL.
+1. Push repository to GitHub.
+2. Enable Pages for branch root.
+3. Open the generated Pages URL.
