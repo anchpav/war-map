@@ -1,382 +1,248 @@
-// ===============================
-// Global War Tracker (GitHub Pages-ready)
-// ===============================
+// Global Conflict Tracker
+// This app is static and GitHub Pages friendly (no server required).
 
-// NOTE FOR FUTURE DATA SOURCE CHANGES:
-// 1) Update API_ENDPOINTS with your new URL(s).
-// 2) Update normalizeEvent() and extractEventList() to map provider fields.
-// 3) Keep renderMarkers(), buildHeatPoints(), and filtering logic unchanged where possible.
-const API_ENDPOINTS = [
-  "https://liveuamap.com/api/events",
-  // Fallback mirror for CORS-restricted environments (same source URL)
-  "https://api.allorigins.win/raw?url=https://liveuamap.com/api/events"
-];
-
-const LAST_MAJOR_WAR_DATE = "2024-10-07";
+// DATA SOURCE SETTINGS:
+// 1) For production, set CONFLICTS_URL to an online JSON endpoint (for example raw.githubusercontent URL).
+// 2) Keep fallback CONFLICTS_FALLBACK_URL as local conflicts.json for local/dev reliability.
+const CONFLICTS_URL = "https://raw.githubusercontent.com/USERNAME/repo/main/conflicts.json";
+const CONFLICTS_FALLBACK_URL = "./conflicts.json";
 
 const state = {
-  rawEvents: [],
-  filteredEvents: [],
-  markersLayer: null,
-  linksLayer: null,
-  heatLayer: null,
+  allEvents: [],
+  filtered: [],
   map: null,
-  showAllYears: true
+  markerLayer: null,
+  linesLayer: null,
+  heatLayer: null,
+  selectedYear: null
 };
 
 const refs = {
-  daysCounter: document.getElementById("daysCounter"),
-  counterMeta: document.getElementById("counterMeta"),
-  yearSlider: document.getElementById("yearSlider"),
-  yearOutput: document.getElementById("yearOutput"),
-  resetFiltersBtn: document.getElementById("resetFiltersBtn"),
+  mapWrap: document.getElementById("mapWrap"),
+  dataUnavailable: document.getElementById("dataUnavailable"),
+  yearFilter: document.getElementById("yearFilter"),
+  yearLabel: document.getElementById("yearLabel"),
+  yearReset: document.getElementById("yearReset"),
+  countryFilter: document.getElementById("countryFilter"),
   visibleCount: document.getElementById("visibleCount"),
-  sourceStatus: document.getElementById("sourceStatus"),
-  lastUpdated: document.getElementById("lastUpdated")
+  sourceLabel: document.getElementById("sourceLabel")
 };
 
 init();
 
-function init() {
-  updatePeaceCounter();
+async function init() {
   initMap();
-  wireControls();
-  loadConflictData();
-}
+  wireFilters();
 
-function updatePeaceCounter() {
-  const start = new Date(`${LAST_MAJOR_WAR_DATE}T00:00:00Z`);
-  const now = new Date();
-  const diffMs = now - start;
-  const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  const loaded = await loadData();
+  if (!loaded) {
+    showDataUnavailable();
+    return;
+  }
 
-  refs.daysCounter.textContent = diffDays.toLocaleString();
-  refs.counterMeta.textContent = `Reference date: ${LAST_MAJOR_WAR_DATE}`;
+  setupFilterRanges();
+  populateCountryFilter();
+  applyFilters();
 }
 
 function initMap() {
-  state.map = L.map("map", {
-    zoomControl: true,
-    worldCopyJump: true
-  }).setView([22, 14], 2);
+  state.map = L.map("map", { zoomControl: true }).setView([20, 8], 2);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(state.map);
 
-  L.control.fullscreen({
-    position: "topleft",
-    title: "Full Screen"
-  }).addTo(state.map);
-
-  state.markersLayer = L.layerGroup().addTo(state.map);
-  state.linksLayer = L.layerGroup().addTo(state.map);
+  state.markerLayer = L.layerGroup().addTo(state.map);
+  state.linesLayer = L.layerGroup().addTo(state.map);
 }
 
-function wireControls() {
-  refs.yearSlider.addEventListener("input", (event) => {
-    const year = Number(event.target.value);
-    refs.yearOutput.textContent = year;
-    applyFiltersAndRender();
+function wireFilters() {
+  refs.yearFilter.addEventListener("input", () => {
+    state.selectedYear = Number(refs.yearFilter.value);
+    refs.yearLabel.textContent = String(state.selectedYear);
+    applyFilters();
   });
 
-  refs.resetFiltersBtn.addEventListener("click", () => {
-    const latestYear = getLatestEventYear(state.rawEvents) || new Date().getUTCFullYear();
-    refs.yearSlider.value = String(latestYear);
-    refs.yearOutput.textContent = String(latestYear);
-    applyFiltersAndRender();
+  refs.yearReset.addEventListener("click", () => {
+    state.selectedYear = null;
+    refs.yearLabel.textContent = "All";
+    applyFilters();
+  });
+
+  refs.countryFilter.addEventListener("change", () => {
+    applyFilters();
   });
 }
 
-async function loadConflictData() {
-  refs.sourceStatus.textContent = "Loading…";
+async function loadData() {
+  const attempts = [
+    { url: CONFLICTS_URL, label: "Online JSON" },
+    { url: CONFLICTS_FALLBACK_URL, label: "Local fallback JSON" }
+  ];
 
-  let events = [];
-  let usedEndpoint = null;
-
-  for (const endpoint of API_ENDPOINTS) {
+  for (const attempt of attempts) {
     try {
-      const response = await fetch(endpoint, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
+      const response = await fetch(attempt.url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
-      const list = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.events)
-          ? payload.events
-          : [];
 
-      if (list.length > 0) {
-        events = list;
-        usedEndpoint = endpoint;
-        break;
-      }
+      if (!Array.isArray(payload)) throw new Error("Expected top-level JSON array");
+
+      state.allEvents = payload
+        .map(normalizeEvent)
+        .filter((event) => Number.isFinite(event.lat) && Number.isFinite(event.lon));
+
+      refs.sourceLabel.textContent = attempt.label;
+      return state.allEvents.length > 0;
     } catch (error) {
-      console.warn(`Failed endpoint ${endpoint}`, error);
+      console.warn(`Failed loading ${attempt.url}`, error);
     }
   }
 
-  if (!events.length) {
-    refs.sourceStatus.textContent = "Unavailable (check network/CORS)";
-    refs.lastUpdated.textContent = "--";
-    refs.visibleCount.textContent = "0";
-    return;
-  }
-
-  state.rawEvents = events
-    .map(normalizeEvent)
-    .filter((event) => Number.isFinite(event.lat) && Number.isFinite(event.lng));
-
-  const [minYear, maxYear] = getYearRange(state.rawEvents);
-  refs.yearSlider.min = String(minYear || new Date().getUTCFullYear());
-  refs.yearSlider.max = String(maxYear || new Date().getUTCFullYear());
-  refs.yearSlider.value = String(maxYear || new Date().getUTCFullYear());
-
-  // IMPORTANT: default mode is ALL years so the map shows all actual current conflicts.
-  state.showAllYears = true;
-  refs.allYearsToggle.checked = true;
-  applyYearControlState();
-
-  refs.sourceStatus.textContent = usedEndpoint.includes("allorigins")
-    ? "LiveUAMap (via mirror)"
-    : "LiveUAMap API";
-
-  refs.lastUpdated.textContent = formatDateTime(new Date());
-
-  applyFiltersAndRender();
+  return false;
 }
 
-function extractEventList(payload) {
-  // LiveUAMap or mirrors may wrap lists under different keys.
-  if (Array.isArray(payload)) return payload;
+function normalizeEvent(raw) {
+  // NOTE FOR EASY SOURCE CHANGES:
+  // If your JSON keys differ, update mappings in this function only.
+  // Example: change raw.lat/raw.lon/raw.country/raw.year to your source field names.
 
-  const candidateKeys = ["events", "data", "items", "results", "features"];
-  for (const key of candidateKeys) {
-    if (Array.isArray(payload?.[key])) return payload[key];
-    if (Array.isArray(payload?.data?.[key])) return payload.data[key];
-  }
-
-  return [];
-}
-
-function normalizeEvent(item) {
-  // Many providers use differing keys; this function standardizes them.
-  const lat = parseCoord(
-    item.lat ?? item.latitude ?? item.geo_lat ?? item?.location?.lat ?? item?.geo?.lat
-  );
-  const lng = parseCoord(
-    item.lng ?? item.lon ?? item.long ?? item.longitude ?? item.geo_lon ?? item?.location?.lng ?? item?.geo?.lon
-  );
-
-  // GeoJSON fallback: coordinates usually [lng, lat]
-  const geoLng = parseCoord(item?.geometry?.coordinates?.[0]);
-  const geoLat = parseCoord(item?.geometry?.coordinates?.[1]);
-
-  const finalLat = Number.isFinite(lat) ? lat : geoLat;
-  const finalLng = Number.isFinite(lng) ? lng : geoLng;
-
-  const title = item.title || item.name || item?.properties?.title || "Untitled conflict event";
-  const description =
-    item.description || item.text || item.content || item?.properties?.description || "No detailed description available.";
-  const region =
-    item.country || item.region || item.location || item.place || item.city || item?.properties?.country || "Unknown region";
-
-  const dateRaw =
-    item.date || item.datetime || item.published_at || item.created_at || item.time || item?.properties?.date || null;
-  const date = parseMaybeDate(dateRaw);
-
-  const sideA = item.sideA || item.source || item.attacker || null;
-  const sideB = item.sideB || item.target || item.defender || null;
-  const toLat = parseCoord(item.to_lat ?? item.target_lat ?? item.destination_lat);
-  const toLng = parseCoord(item.to_lng ?? item.target_lng ?? item.destination_lng);
-
-  // intensity may be numeric or inferred from fields like casualties/severity/category
-  const intensity = inferIntensity(item);
+  const lat = Number(raw.lat ?? raw.latitude);
+  const lon = Number(raw.lon ?? raw.lng ?? raw.longitude);
 
   return {
-    lat: finalLat,
-    lng: finalLng,
-    toLat,
-    toLng,
-    title,
-    description,
-    region,
-    date,
-    sideA,
-    sideB,
-    intensity,
-    raw: item
+    id: raw.id ?? cryptoRandomId(),
+    lat,
+    lon,
+    title: raw.title ?? "Untitled conflict",
+    description: raw.description ?? "No description available.",
+    country: raw.country ?? "Unknown",
+    year: Number(raw.year),
+    actor1: normalizeActor(raw.actor1),
+    actor2: normalizeActor(raw.actor2)
   };
 }
 
-function inferIntensity(item) {
-  const direct = Number(item.intensity ?? item.severity ?? item.weight ?? item.level);
-  if (Number.isFinite(direct) && direct > 0) return clamp(direct, 0.2, 1);
-
-  const casualties = Number(item.casualties ?? item.killed ?? item.injured);
-  if (Number.isFinite(casualties) && casualties > 0) {
-    return clamp(Math.log10(casualties + 1) / 2, 0.2, 1);
-  }
-
-  const text = String(item.category || item.type || item?.properties?.category || "").toLowerCase();
-  if (text.includes("airstrike") || text.includes("missile") || text.includes("battle")) {
-    return 0.9;
-  }
-  if (text.includes("protest") || text.includes("tension")) {
-    return 0.4;
-  }
-
-  return 0.55;
+function normalizeActor(actor) {
+  return {
+    lat: Number(actor?.lat),
+    lon: Number(actor?.lon),
+    name: actor?.name ?? "Unknown actor"
+  };
 }
 
-function applyFiltersAndRender() {
-  const selectedYear = Number(refs.yearSlider.value);
+function setupFilterRanges() {
+  const years = state.allEvents
+    .map((event) => event.year)
+    .filter((year) => Number.isFinite(year));
 
-  state.filteredEvents = state.rawEvents.filter((event) => {
-    if (state.showAllYears) return true;
-    if (!event.date) return true;
-    return event.date.getUTCFullYear() === selectedYear;
+  const minYear = years.length ? Math.min(...years) : new Date().getFullYear();
+  const maxYear = years.length ? Math.max(...years) : new Date().getFullYear();
+
+  refs.yearFilter.min = String(minYear);
+  refs.yearFilter.max = String(maxYear);
+  refs.yearFilter.value = String(maxYear);
+}
+
+function populateCountryFilter() {
+  const countries = Array.from(new Set(state.allEvents.map((event) => event.country))).sort();
+  refs.countryFilter.innerHTML = "";
+
+  countries.forEach((country) => {
+    const option = document.createElement("option");
+    option.value = country;
+    option.textContent = country;
+    refs.countryFilter.append(option);
+  });
+}
+
+function getSelectedCountries() {
+  return Array.from(refs.countryFilter.selectedOptions).map((option) => option.value);
+}
+
+function applyFilters() {
+  const selectedCountries = getSelectedCountries();
+
+  state.filtered = state.allEvents.filter((event) => {
+    const yearPass = state.selectedYear === null ? true : event.year === state.selectedYear;
+    const countryPass = selectedCountries.length === 0 ? true : selectedCountries.includes(event.country);
+    return yearPass && countryPass;
   });
 
-  renderMarkers(state.filteredEvents);
-  renderHeatmap(state.filteredEvents);
-  refs.visibleCount.textContent = state.filteredEvents.length.toLocaleString();
+  renderMap(state.filtered);
+  refs.visibleCount.textContent = String(state.filtered.length);
 }
 
-function renderMarkers(events) {
-  state.markersLayer.clearLayers();
-  state.linksLayer.clearLayers();
+function renderMap(events) {
+  state.markerLayer.clearLayers();
+  state.linesLayer.clearLayers();
 
+  // Red markers for all conflicts + popup content.
+  // To customize popup layout later, edit this section only.
   events.forEach((event) => {
-    const markerColor = intensityToColor(event.intensity);
-    const marker = L.circleMarker([event.lat, event.lng], {
+    const marker = L.circleMarker([event.lat, event.lon], {
       radius: 7,
-      color: markerColor,
-      fillColor: markerColor,
-      fillOpacity: 0.8,
-      weight: 1.2
-    });
+      color: "#ff2a2a",
+      fillColor: "#ff2a2a",
+      fillOpacity: 0.9,
+      weight: 1
+    }).addTo(state.markerLayer);
 
     marker.bindPopup(`
       <div>
-        <h3 class="popup-title">${escapeHtml(event.title)}</h3>
-        <p class="popup-region">${escapeHtml(event.region)}</p>
-        <p class="popup-description">${escapeHtml(event.description)}</p>
+        <strong>${escapeHtml(event.title)}</strong><br />
+        ${escapeHtml(event.description)}<br />
+        <em>${escapeHtml(event.country)}</em>
       </div>
     `);
 
-    marker.addTo(state.markersLayer);
-
-    // Draw directional conflict line if a destination point exists in the source data.
-    if (Number.isFinite(event.toLat) && Number.isFinite(event.toLng)) {
-      const polyline = L.polyline(
+    // Yellow line connecting actor1 and actor2.
+    if (
+      Number.isFinite(event.actor1.lat) &&
+      Number.isFinite(event.actor1.lon) &&
+      Number.isFinite(event.actor2.lat) &&
+      Number.isFinite(event.actor2.lon)
+    ) {
+      L.polyline(
         [
-          [event.lat, event.lng],
-          [event.toLat, event.toLng]
+          [event.actor1.lat, event.actor1.lon],
+          [event.actor2.lat, event.actor2.lon]
         ],
-        {
-          color: markerColor,
-          weight: 2,
-          opacity: 0.75
-        }
-      );
-
-      if (typeof polyline.arrowheads === "function") {
-        polyline.arrowheads({ size: "10px", frequency: "endonly" });
-      }
-
-      polyline.bindTooltip(
-        `${escapeHtml(event.sideA || "Side A")} → ${escapeHtml(event.sideB || "Side B")}`
-      );
-
-      polyline.addTo(state.linksLayer);
+        { color: "#ffe54d", weight: 2.5, opacity: 0.9 }
+      )
+        .bindTooltip(`${escapeHtml(event.actor1.name)} → ${escapeHtml(event.actor2.name)}`)
+        .addTo(state.linesLayer);
     }
   });
+
+  renderHeat(events);
 }
 
-function renderHeatmap(events) {
+function renderHeat(events) {
   if (state.heatLayer) {
     state.map.removeLayer(state.heatLayer);
   }
 
-  const heatPoints = buildHeatPoints(events);
+  if (typeof L.heatLayer !== "function") return;
 
-  // Plugin might fail to load on restricted networks: guard to avoid runtime crash.
-  if (typeof L.heatLayer !== "function") {
-    state.heatLayer = null;
-    return;
-  }
-
-  state.heatLayer = L.heatLayer(heatPoints, {
-    radius: 26,
-    blur: 20,
-    maxZoom: 7,
-    minOpacity: 0.28,
+  const points = events.map((event) => [event.lat, event.lon, 0.8]);
+  state.heatLayer = L.heatLayer(points, {
+    radius: 28,
+    blur: 22,
+    maxZoom: 8,
     gradient: {
-      0.2: "#3b82f6",
-      0.45: "#14b8a6",
-      0.7: "#f59e0b",
-      1.0: "#ef4444"
+      0.3: "#fff59d",
+      0.6: "#ffb74d",
+      1.0: "#ff3d00"
     }
   }).addTo(state.map);
 }
 
-function buildHeatPoints(events) {
-  return events.map((event) => [event.lat, event.lng, clamp(event.intensity, 0.2, 1)]);
-}
-
-function getYearRange(events) {
-  const years = events
-    .map((event) => event.date?.getUTCFullYear())
-    .filter((year) => Number.isFinite(year));
-
-  if (!years.length) return [null, null];
-  return [Math.min(...years), Math.max(...years)];
-}
-
-function parseMaybeDate(value) {
-  if (!value) return null;
-
-  if (Number.isFinite(Number(value)) && String(value).length <= 13) {
-    const ms = String(value).length <= 10 ? Number(value) * 1000 : Number(value);
-    const asEpoch = new Date(ms);
-    if (!Number.isNaN(asEpoch.getTime())) return asEpoch;
-  }
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function parseCoord(value) {
-  if (value === null || value === undefined) return NaN;
-  if (typeof value === "number") return value;
-  const normalized = String(value).trim().replace(",", ".");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : NaN;
-}
-
-function formatDateTime(date) {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
-}
-
-function intensityToColor(intensity) {
-  if (intensity >= 0.85) return "#ff365f";
-  if (intensity >= 0.65) return "#ff8c3a";
-  if (intensity >= 0.45) return "#ffd644";
-  return "#58d7ff";
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
+function showDataUnavailable() {
+  refs.mapWrap.hidden = true;
+  refs.dataUnavailable.hidden = false;
+  refs.sourceLabel.textContent = "Unavailable";
 }
 
 function escapeHtml(text) {
@@ -386,4 +252,8 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function cryptoRandomId() {
+  return Math.floor(Math.random() * 1_000_000_000);
 }
