@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Global Conflict Tracker</title>
+
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -19,16 +20,15 @@
       <p>Interactive Leaflet map with local JSON data, timeline, and country filters.</p>
     </header>
 
-    <section class="controls" aria-label="Filters">
+    <section class="controls">
       <div class="control">
         <label for="yearFilter">Year: <strong id="yearLabel">All</strong></label>
         <input id="yearFilter" type="range" min="2020" max="2030" value="2030" step="1" />
         <button id="yearReset" class="btn">Show all years</button>
       </div>
-
       <div class="control">
         <label for="countryFilter">Countries (multi-select)</label>
-        <select id="countryFilter" multiple size="6" aria-label="Country multi-select"></select>
+        <select id="countryFilter" multiple size="6"></select>
         <p class="hint">Tip: Ctrl/Cmd + click for multiple countries. If nothing selected, all countries are shown.</p>
       </div>
     </section>
@@ -48,7 +48,7 @@
       </div>
     </section>
 
-    <section id="mapWrap" class="map-wrap">
+    <section class="map-wrap">
       <div id="map"></div>
     </section>
 
