@@ -56,7 +56,11 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
       <svg width={size.width} height={size.height} className="world-svg">
         <g>
           {geoData.features.map((feature: any) => {
-            const countryName = String(feature.properties?.name ?? 'Unknown')
+            const countryName =
+  feature.properties?.name ||
+  feature.properties?.ADMIN ||
+  feature.properties?.NAME ||
+  'Unknown'
             return (
               <path
                 key={countryName}
