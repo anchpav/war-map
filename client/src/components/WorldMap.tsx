@@ -15,10 +15,6 @@ type WorldMapProps = {
 
 type Size = { width: number; height: number }
 
-/**
- * Hook that observes container size
- * so the map projection scales responsively.
- */
 function useContainerSize() {
   const ref = useRef<HTMLDivElement | null>(null)
   const [size, setSize] = useState<Size>({ width: 1000, height: 560 })
@@ -54,10 +50,6 @@ export function WorldMap({
   const { ref, size } = useContainerSize()
   const svgRef = useRef<SVGSVGElement | null>(null)
 
-  /**
-   * Create map projection that automatically fits the world
-   * into the SVG container.
-   */
   const projection: GeoProjection = useMemo(() => {
     return geoMercator().fitSize(
       [size.width, size.height],
@@ -67,9 +59,6 @@ export function WorldMap({
 
   const pathBuilder = useMemo(() => geoPath(projection), [projection])
 
-  /**
-   * Enable zoom + pan interaction using d3-zoom.
-   */
   useEffect(() => {
     if (!svgRef.current) return
 
@@ -85,20 +74,12 @@ export function WorldMap({
 
   }, [])
 
-  /**
-   * Convert geographic coordinates to screen coordinates.
-   * Used for drawing conflict lines.
-   */
   function project(coords: [number, number]): [number, number] | null {
     const point = projection(coords)
     return point ? [point[0], point[1]] : null
   }
 
-  /**
-   * Zoom the map to a specific country when clicked.
-   */
   function zoomToCountry(feature: any) {
-
     if (!svgRef.current) return
 
     const [[x0, y0], [x1, y1]] = pathBuilder.bounds(feature)
@@ -140,11 +121,14 @@ export function WorldMap({
         height={size.height}
         className="world-svg"
       >
-<rect
-  width={size.width}
-  height={size.height}
-  fill="#0b1f33"
-/>
+
+        {/* Ocean background */}
+        <rect
+          width={size.width}
+          height={size.height}
+          fill="#0b1f33"
+        />
+
         <g>
 
           {geoData.features.map((feature: any) => {
@@ -155,18 +139,34 @@ export function WorldMap({
               feature.properties?.NAME ||
               "Unknown"
 
+            const centroid = pathBuilder.centroid(feature)
+
             return (
-              <path
-                key={countryName}
-                d={pathBuilder(feature) ?? undefined}
-                className={`country ${selectedCountry === countryName ? "selected" : ""}`}
-                onMouseEnter={() => onHoverText(countryName)}
-                onMouseLeave={() => onHoverText("")}
-                onClick={() => {
-                  onSelectCountry(countryName)
-                  zoomToCountry(feature)
-                }}
-              />
+              <g key={countryName}>
+
+                <path
+                  d={pathBuilder(feature) ?? undefined}
+                  className={`country ${selectedCountry === countryName ? "selected" : ""}`}
+                  onMouseEnter={() => onHoverText(countryName)}
+                  onMouseLeave={() => onHoverText("")}
+                  onClick={() => {
+                    onSelectCountry(countryName)
+                    zoomToCountry(feature)
+                  }}
+                />
+
+                {/* Country label */}
+                {centroid && (
+                  <text
+                    x={centroid[0]}
+                    y={centroid[1]}
+                    className="country-label"
+                  >
+                    {countryName}
+                  </text>
+                )}
+
+              </g>
             )
           })}
 
