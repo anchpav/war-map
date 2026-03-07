@@ -140,7 +140,11 @@ export function WorldMap({
         height={size.height}
         className="world-svg"
       >
-
+<rect
+  width={size.width}
+  height={size.height}
+  fill="#0b1f33"
+/>
         <g>
 
           {geoData.features.map((feature: any) => {
