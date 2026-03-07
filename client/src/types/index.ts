@@ -1,15 +1,14 @@
 export type Conflict = {
   id: string
-  name: string
-  countries: [string, string] | string[]
-  start_date: string
-  end_date?: string | null
-  active: boolean
+  country: string
+  opponent: string
+  lat: number
+  lon: number
+  opponentLat: number
+  opponentLon: number
+  start: string
+  end: string | null
   description: string
-}
-
-export type ConflictsResponse = {
-  conflicts: Conflict[]
 }
 
 export type Metrics = {

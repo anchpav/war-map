@@ -4,25 +4,26 @@ type MetricsPanelProps = {
   metrics: Metrics
 }
 
+/** Read-only metrics cards shown above the map. */
 export function MetricsPanel({ metrics }: MetricsPanelProps) {
   return (
     <section className="metrics-grid">
-      <div className="panel metric-card">
-        <span>Total Conflicts</span>
+      <article className="panel metric-card">
+        <span>Total conflicts</span>
         <strong>{metrics.totalConflicts}</strong>
-      </div>
-      <div className="panel metric-card">
-        <span>Active Conflicts</span>
+      </article>
+      <article className="panel metric-card">
+        <span>Active conflicts</span>
         <strong>{metrics.activeConflicts}</strong>
-      </div>
-      <div className="panel metric-card">
-        <span>Days Without War (World)</span>
+      </article>
+      <article className="panel metric-card">
+        <span>Days without war (world)</span>
         <strong>{metrics.daysWithoutWarWorld}</strong>
-      </div>
-      <div className="panel metric-card">
-        <span>Days Without War (Selected)</span>
+      </article>
+      <article className="panel metric-card">
+        <span>Days without war (selected)</span>
         <strong>{metrics.daysWithoutWarSelected}</strong>
-      </div>
+      </article>
     </section>
   )
 }

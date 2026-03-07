@@ -1,37 +1,31 @@
-import express from "express"
-import cors from "cors"
-import fs from "fs"
-import path from "path"
-import { fileURLToPath } from "url"
+import express from 'express'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-// recreate __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const conflictsPath = path.join(__dirname, '..', 'client', 'public', 'data', 'conflicts.json')
 
 const app = express()
-const PORT = 3000
+const PORT = 3001
 
-app.use(cors())
-app.use(express.json())
+/**
+ * Read conflicts from local JSON file.
+ * Keeping file reads explicit makes this easy to understand for beginners.
+ */
+async function readConflicts() {
+  const raw = await fs.readFile(conflictsPath, 'utf-8')
+  return JSON.parse(raw)
+}
 
-// path to conflicts data
-const dataPath = path.join(__dirname, "../client/public/data/conflicts.json")
-
-// API endpoint for conflicts
-app.get("/api/conflicts", (req, res) => {
+app.get('/api/conflicts', async (_req, res) => {
   try {
-    const raw = fs.readFileSync(dataPath)
-    const data = JSON.parse(raw)
-    res.json(data)
-  } catch (err) {
-    console.error("Failed to read conflicts:", err)
-    res.status(500).json({ error: "Failed to load conflicts" })
+    const conflicts = await readConflicts()
+    res.json(conflicts)
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to read conflicts data.' })
   }
-})
-
-// simple health check
-app.get("/", (req, res) => {
-  res.send("War Map API running")
 })
 
 app.listen(PORT, () => {

@@ -1,49 +1,62 @@
-{
-  "conflicts": [
-    {
-      "id": "russia-ukraine",
-      "name": "Russia–Ukraine War",
-      "countries": ["Russia", "Ukraine"],
-      "start_date": "2022-02-24",
-      "end_date": null,
-      "active": true,
-      "description": "Ongoing military conflict between Russia and Ukraine"
-    },
-    {
-      "id": "israel-palestine",
-      "name": "Israel–Palestine Conflict",
-      "countries": ["Israel", "Palestine"],
-      "start_date": "2023-10-07",
-      "end_date": null,
-      "active": true,
-      "description": "Armed conflict around Gaza and nearby areas"
-    },
-    {
-      "id": "syria-war",
-      "name": "Syrian Civil War",
-      "countries": ["Syria", "Turkey"],
-      "start_date": "2011-03-15",
-      "end_date": null,
-      "active": true,
-      "description": "Multi-party conflict with cross-border involvement"
-    },
-    {
-      "id": "karabakh-2020",
-      "name": "Nagorno-Karabakh War",
-      "countries": ["Russia", "Turkey"],
-      "start_date": "2020-09-27",
-      "end_date": "2020-11-10",
-      "active": false,
-      "description": "Short but intense interstate conflict"
-    },
-    {
-      "id": "gulf-war-1990",
-      "name": "Gulf War",
-      "countries": ["United States", "Iran"],
-      "start_date": "1990-08-02",
-      "end_date": "1991-02-28",
-      "active": false,
-      "description": "Coalition operation linked to Iraq invasion context"
-    }
-  ]
-}
+[
+  {
+    "id": "russia-ukraine",
+    "country": "Russia",
+    "opponent": "Ukraine",
+    "lat": 55.7558,
+    "lon": 37.6173,
+    "opponentLat": 50.4501,
+    "opponentLon": 30.5234,
+    "start": "2022-02-24",
+    "end": null,
+    "description": "Russia-Ukraine war"
+  },
+  {
+    "id": "israel-palestine",
+    "country": "Israel",
+    "opponent": "Palestine",
+    "lat": 31.7683,
+    "lon": 35.2137,
+    "opponentLat": 31.5,
+    "opponentLon": 34.4667,
+    "start": "2023-10-07",
+    "end": null,
+    "description": "Israel-Palestine conflict"
+  },
+  {
+    "id": "syria-turkey-border",
+    "country": "Syria",
+    "opponent": "Turkey",
+    "lat": 33.5138,
+    "lon": 36.2765,
+    "opponentLat": 39.9334,
+    "opponentLon": 32.8597,
+    "start": "2011-03-15",
+    "end": null,
+    "description": "Cross-border conflict activity"
+  },
+  {
+    "id": "karabakh-2020",
+    "country": "Armenia",
+    "opponent": "Azerbaijan",
+    "lat": 40.1772,
+    "lon": 44.5035,
+    "opponentLat": 40.4093,
+    "opponentLon": 49.8671,
+    "start": "2020-09-27",
+    "end": "2020-11-10",
+    "description": "Nagorno-Karabakh conflict"
+  },
+  {
+    "id": "gulf-war-historical",
+    "country": "Iraq",
+    "opponent": "United States",
+    "lat": 33.3152,
+    "lon": 44.3661,
+    "opponentLat": 38.9072,
+    "opponentLon": -77.0369,
+    "start": "1990-08-02",
+    "end": "1991-02-28",
+    "description": "Gulf War"
+  }
+]

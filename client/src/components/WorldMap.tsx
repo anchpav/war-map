@@ -1,7 +1,5 @@
-import { select } from 'd3-selection'
-import { geoMercator, geoPath, geoCentroid } from 'd3-geo'
-import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom'
-import { useEffect, useMemo, useRef } from 'react'
+import { geoMercator, geoPath, type GeoProjection, type GeoPermissibleObjects } from 'd3-geo'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import type { Conflict } from '../types'
 import { ConflictLines } from './ConflictLines'
 
@@ -10,83 +8,68 @@ type WorldMapProps = {
   conflicts: Conflict[]
   selectedCountry: string
   onSelectCountry: (country: string) => void
-  onTooltipChange: (text: string) => void
+  onHoverText: (text: string) => void
 }
 
-const WIDTH = 1000
-const HEIGHT = 520
+type Size = { width: number; height: number }
 
-export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry, onTooltipChange }: WorldMapProps) {
-  const svgRef = useRef<SVGSVGElement | null>(null)
-  const mapGroupRef = useRef<SVGGElement | null>(null)
-  const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null)
-
-  const projection = useMemo(
-    () => geoMercator().fitSize([WIDTH, HEIGHT], geoData).precision(0.1),
-    [geoData]
-  )
-
-  const pathGenerator = useMemo(() => geoPath(projection), [projection])
+/**
+ * Observe container size so the projection can scale to available space.
+ */
+function useContainerSize() {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [size, setSize] = useState<Size>({ width: 1000, height: 560 })
 
   useEffect(() => {
-    if (!svgRef.current || !mapGroupRef.current) return
+    if (!ref.current) return
 
-    const svg = select(svgRef.current)
-    const mapGroup = select(mapGroupRef.current)
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      setSize({ width: entry.contentRect.width, height: Math.max(420, entry.contentRect.width * 0.56) })
+    })
 
-    const zoomBehavior = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([1, 8])
-      .on('zoom', (event) => {
-        mapGroup.attr('transform', event.transform)
-      })
-
-    zoomRef.current = zoomBehavior
-    svg.call(zoomBehavior)
+    observer.observe(ref.current)
+    return () => observer.disconnect()
   }, [])
 
-  useEffect(() => {
-    if (!selectedCountry || !svgRef.current || !zoomRef.current) return
+  return { ref, size }
+}
 
-    // Focus the selected country to improve usability after search selection.
-    const feature = geoData.features.find((item: any) => item.properties?.name === selectedCountry)
-    if (!feature) return
+export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry, onHoverText }: WorldMapProps) {
+  const { ref, size } = useContainerSize()
 
-    const [lon, lat] = geoCentroid(feature)
-    const point = projection([lon, lat])
-    if (!point) return
+  // Build projection from GeoJSON so map fills the component area.
+  const projection: GeoProjection = useMemo(() => {
+    return geoMercator().fitSize([size.width, size.height], geoData as GeoPermissibleObjects)
+  }, [geoData, size])
 
-    const target = zoomIdentity.translate(WIDTH / 2 - point[0] * 2, HEIGHT / 2 - point[1] * 2).scale(2)
+  const pathBuilder = useMemo(() => geoPath(projection), [projection])
 
-    select(svgRef.current).transition().duration(500).call(zoomRef.current.transform as any, target)
-  }, [selectedCountry, geoData, projection])
+  function project(coords: [number, number]): [number, number] | null {
+    const point = projection(coords)
+    return point ? [point[0], point[1]] : null
+  }
 
   return (
-    <div className="panel map-panel">
-      <svg ref={svgRef} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="world-svg">
-        <g ref={mapGroupRef}>
+    <div ref={ref} className="panel map-panel">
+      <svg width={size.width} height={size.height} className="world-svg">
+        <g>
           {geoData.features.map((feature: any) => {
-            const countryName = feature.properties?.name ?? 'Unknown'
-            const isSelected = countryName === selectedCountry
-
+            const countryName = String(feature.properties?.name ?? 'Unknown')
             return (
               <path
                 key={countryName}
-                d={pathGenerator(feature) ?? undefined}
-                className={`country ${isSelected ? 'selected' : ''}`}
-                onMouseEnter={() => onTooltipChange(countryName)}
-                onMouseLeave={() => onTooltipChange('')}
+                d={pathBuilder(feature) ?? undefined}
+                className={`country ${selectedCountry === countryName ? 'selected' : ''}`}
+                onMouseEnter={() => onHoverText(countryName)}
+                onMouseLeave={() => onHoverText('')}
                 onClick={() => onSelectCountry(countryName)}
               />
             )
           })}
 
-          <ConflictLines
-            conflicts={conflicts}
-            projection={projection}
-            features={geoData.features}
-            onHoverConflict={onTooltipChange}
-            onLeaveConflict={() => onTooltipChange('')}
-          />
+          <ConflictLines conflicts={conflicts} project={project} onHoverText={onHoverText} />
         </g>
       </svg>
     </div>

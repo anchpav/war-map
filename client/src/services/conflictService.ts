@@ -1,25 +1,16 @@
-import type { ConflictsResponse, Metrics } from '../types'
+import type { Conflict } from '../types'
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options)
-
+/** Load conflicts from backend API with clear error messages for UI. */
+export async function fetchConflicts(): Promise<Conflict[]> {
+  const response = await fetch('/api/conflicts')
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`API error: ${response.status} ${text}`)
+    throw new Error('Server is not available. Please start backend on port 3001.')
   }
 
-  return response.json()
-}
+  const data = await response.json()
+  if (!Array.isArray(data)) {
+    throw new Error('Invalid conflicts format from server.')
+  }
 
-export function fetchConflicts(): Promise<ConflictsResponse> {
-  return request('/api/conflicts')
-}
-
-export function fetchMetrics(country?: string): Promise<Metrics> {
-  const query = country ? `?country=${encodeURIComponent(country)}` : ''
-  return request(`/api/metrics${query}`)
-}
-
-export function updateConflictsFromAI(): Promise<{ status: string; message: string }> {
-  return request('/api/update-conflicts', { method: 'POST' })
+  return data
 }

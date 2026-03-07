@@ -1,47 +1,40 @@
-import { geoCentroid } from 'd3-geo'
-import type { GeoProjection } from 'd3-geo'
+import { line, curveBasis } from 'd3-shape'
 import type { Conflict } from '../types'
 
 type ConflictLinesProps = {
   conflicts: Conflict[]
-  projection: GeoProjection
-  features: any[]
-  onHoverConflict: (text: string) => void
-  onLeaveConflict: () => void
+  project: (coords: [number, number]) => [number, number] | null
+  onHoverText: (text: string) => void
 }
 
-function centroidByCountry(features: any[], projection: GeoProjection, country: string): [number, number] | null {
-  const feature = features.find((item) => item.properties?.name === country)
-  if (!feature) return null
-
-  const [lon, lat] = geoCentroid(feature)
-  const point = projection([lon, lat])
-  if (!point) return null
-
-  return [point[0], point[1]]
-}
-
-export function ConflictLines({ conflicts, projection, features, onHoverConflict, onLeaveConflict }: ConflictLinesProps) {
-  const activeConflicts = conflicts.filter((conflict) => conflict.active)
+/**
+ * Draw animated conflict connections using curved dashed SVG paths.
+ * Curves are easier to read than straight crossing lines.
+ */
+export function ConflictLines({ conflicts, project, onHoverText }: ConflictLinesProps) {
+  const active = conflicts.filter((item) => item.end === null)
 
   return (
     <g>
-      {activeConflicts.map((conflict) => {
-        const [countryA, countryB] = conflict.countries
-        const from = centroidByCountry(features, projection, countryA)
-        const to = centroidByCountry(features, projection, countryB)
+      {active.map((item) => {
+        const from = project([item.lon, item.lat])
+        const to = project([item.opponentLon, item.opponentLat])
         if (!from || !to) return null
 
+        const midpoint: [number, number] = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 - 20]
+
+        const path = line<[number, number]>()
+          .curve(curveBasis)
+          .x((point) => point[0])
+          .y((point) => point[1])([from, midpoint, to])
+
         return (
-          <line
-            key={conflict.id}
+          <path
+            key={item.id}
+            d={path ?? undefined}
             className="conflict-line"
-            x1={from[0]}
-            y1={from[1]}
-            x2={to[0]}
-            y2={to[1]}
-            onMouseEnter={() => onHoverConflict(`${conflict.name}: ${countryA} vs ${countryB}`)}
-            onMouseLeave={onLeaveConflict}
+            onMouseEnter={() => onHoverText(`${item.country} vs ${item.opponent} • ${item.start}`)}
+            onMouseLeave={() => onHoverText('')}
           />
         )
       })}
