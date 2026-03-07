@@ -1,0 +1,62 @@
+[
+  {
+    "id": "russia-ukraine-war",
+    "country": "Ukraine",
+    "lat": 50.45,
+    "lon": 30.52,
+    "start": "2022-02-24",
+    "end": null,
+    "description": "Interstate war",
+    "opponent": "Russia",
+    "opponentLat": 55.75,
+    "opponentLon": 37.62
+  },
+  {
+    "id": "israel-gaza-conflict",
+    "country": "Israel",
+    "lat": 31.77,
+    "lon": 35.21,
+    "start": "2023-10-07",
+    "end": null,
+    "description": "Armed conflict",
+    "opponent": "Palestine",
+    "opponentLat": 31.95,
+    "opponentLon": 35.27
+  },
+  {
+    "id": "syria-civil-war",
+    "country": "Syria",
+    "lat": 33.51,
+    "lon": 36.29,
+    "start": "2011-03-15",
+    "end": null,
+    "description": "Civil war",
+    "opponent": "Rebel groups",
+    "opponentLat": 35.0,
+    "opponentLon": 38.0
+  },
+  {
+    "id": "nagorno-karabakh-2020",
+    "country": "Azerbaijan",
+    "lat": 40.18,
+    "lon": 47.0,
+    "start": "2020-09-27",
+    "end": "2020-11-10",
+    "description": "Interstate war",
+    "opponent": "Armenia",
+    "opponentLat": 40.18,
+    "opponentLon": 44.51
+  },
+  {
+    "id": "gulf-war-1990",
+    "country": "Iraq",
+    "lat": 33.31,
+    "lon": 44.36,
+    "start": "1990-08-02",
+    "end": "1991-02-28",
+    "description": "Interstate war",
+    "opponent": "Kuwait",
+    "opponentLat": 29.31,
+    "opponentLon": 47.48
+  }
+]

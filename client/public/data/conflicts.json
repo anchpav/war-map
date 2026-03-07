@@ -1,0 +1,49 @@
+{
+  "conflicts": [
+    {
+      "id": "russia-ukraine",
+      "name": "Russia–Ukraine War",
+      "countries": ["Russia", "Ukraine"],
+      "start_date": "2022-02-24",
+      "end_date": null,
+      "active": true,
+      "description": "Ongoing military conflict between Russia and Ukraine"
+    },
+    {
+      "id": "israel-palestine",
+      "name": "Israel–Palestine Conflict",
+      "countries": ["Israel", "Palestine"],
+      "start_date": "2023-10-07",
+      "end_date": null,
+      "active": true,
+      "description": "Armed conflict around Gaza and nearby areas"
+    },
+    {
+      "id": "syria-war",
+      "name": "Syrian Civil War",
+      "countries": ["Syria", "Turkey"],
+      "start_date": "2011-03-15",
+      "end_date": null,
+      "active": true,
+      "description": "Multi-party conflict with cross-border involvement"
+    },
+    {
+      "id": "karabakh-2020",
+      "name": "Nagorno-Karabakh War",
+      "countries": ["Russia", "Turkey"],
+      "start_date": "2020-09-27",
+      "end_date": "2020-11-10",
+      "active": false,
+      "description": "Short but intense interstate conflict"
+    },
+    {
+      "id": "gulf-war-1990",
+      "name": "Gulf War",
+      "countries": ["United States", "Iran"],
+      "start_date": "1990-08-02",
+      "end_date": "1991-02-28",
+      "active": false,
+      "description": "Coalition operation linked to Iraq invasion context"
+    }
+  ]
+}
