@@ -1,0 +1,62 @@
+[
+  {
+    "id": "russia-ukraine-war",
+    "country": "Ukraine",
+    "opponent": "Russia",
+    "start": "2022-02-24",
+    "end": null,
+    "type": "Invasion",
+    "lat": 50.45,
+    "lon": 30.52
+  },
+  {
+    "id": "syrian-civil-war",
+    "country": "Syria",
+    "opponent": "Various groups",
+    "start": "2011-03-15",
+    "end": null,
+    "type": "Civil war",
+    "lat": 33.51,
+    "lon": 36.29
+  },
+  {
+    "id": "gaza-israel-conflict",
+    "country": "Israel",
+    "opponent": "Palestine",
+    "start": "2023-10-07",
+    "end": null,
+    "type": "Armed conflict",
+    "lat": 31.77,
+    "lon": 35.21
+  },
+  {
+    "id": "nagorno-karabakh-2020",
+    "country": "Azerbaijan",
+    "opponent": "Armenia",
+    "start": "2020-09-27",
+    "end": "2020-11-10",
+    "type": "Interstate war",
+    "lat": 40.18,
+    "lon": 47.00
+  },
+  {
+    "id": "gulf-war-1990",
+    "country": "Iraq",
+    "opponent": "Kuwait",
+    "start": "1990-08-02",
+    "end": "1991-02-28",
+    "type": "Interstate war",
+    "lat": 33.31,
+    "lon": 44.36
+  },
+  {
+    "id": "korean-war",
+    "country": "South Korea",
+    "opponent": "North Korea",
+    "start": "1950-06-25",
+    "end": "1953-07-27",
+    "type": "Interstate war",
+    "lat": 37.56,
+    "lon": 126.97
+  }
+]

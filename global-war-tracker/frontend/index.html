@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global War Tracker MVP</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Global War Tracker (MVP)</h1>
+      <p>Custom SVG map • country search • days without war • active conflicts</p>
+    </header>
+
+    <main class="layout">
+      <section class="controls">
+        <label for="countrySearch">Country search</label>
+        <input id="countrySearch" type="text" list="countryList" placeholder="Type country name" />
+        <datalist id="countryList"></datalist>
+
+        <div class="button-row">
+          <button id="myCountryBtn" type="button">Use my country</button>
+          <button id="clearBtn" type="button">Clear</button>
+        </div>
+
+        <label for="yearSlider">Timeline year: <span id="yearLabel">2026</span></label>
+        <input id="yearSlider" type="range" min="1900" max="2026" value="2026" />
+
+        <button id="refreshBtn" type="button">Refresh Data</button>
+
+        <div class="metrics">
+          <h2>Metrics</h2>
+          <p>Days without war (global): <strong id="daysGlobal">0</strong></p>
+          <p>Days without war (selected): <strong id="daysCountry">0</strong></p>
+          <p>Active conflicts (selected): <strong id="activeCount">0</strong></p>
+        </div>
+
+        <div class="timeline">
+          <h2>Animation</h2>
+          <div class="button-row">
+            <button id="playBtn" type="button">Play</button>
+            <button id="pauseBtn" type="button">Pause</button>
+          </div>
+          <p id="timelineStatus">Timeline idle</p>
+        </div>
+
+        <div>
+          <h2>Current active conflicts</h2>
+          <ul id="activeList"></ul>
+        </div>
+      </section>
+
+      <section class="map-panel">
+        <svg id="worldMap" viewBox="-180 -90 360 180" aria-label="Custom world map">
+          <g id="viewport"></g>
+          <g id="conflictLayer"></g>
+        </svg>
+        <div id="tooltip" class="tooltip hidden"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,117 @@
+:root {
+  --bg: #11151c;
+  --panel: #1b222c;
+  --text: #eef3f8;
+  --muted: #9dacbd;
+  --border: #2b3644;
+  --active: #ff4d4d;
+  --recent: #ff9f43;
+  --history: #8d98a5;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header, .layout {
+  width: min(1360px, 96vw);
+  margin: 0 auto;
+}
+header { padding: 0.8rem 0; }
+header p { margin: 0.25rem 0 0; color: var(--muted); }
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.controls, .map-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.controls {
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+}
+
+label { color: var(--muted); font-size: 0.92rem; }
+input, button {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: #121a24;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.52rem;
+}
+button { cursor: pointer; }
+.button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+h2 { margin: 0.4rem 0 0.1rem; font-size: 1rem; }
+.metrics p, .timeline p { margin: 0.2rem 0; }
+
+#activeList {
+  margin: 0;
+  padding-left: 1rem;
+  max-height: 190px;
+  overflow: auto;
+}
+#activeList li { margin-bottom: 0.35rem; font-size: 0.9rem; }
+
+.map-panel {
+  position: relative;
+  padding: 0.6rem;
+}
+
+#worldMap {
+  width: 100%;
+  height: 78vh;
+  background: #0f141b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  touch-action: none;
+}
+
+.country {
+  fill: #253242;
+  stroke: #3d4e60;
+  stroke-width: 0.5;
+  cursor: pointer;
+}
+.country:hover { fill: #3a4f65; }
+.country.selected { fill: #4e6a86; }
+
+.conflict-line { fill: none; stroke-width: 1.4; opacity: 0.9; }
+.arrow-head { opacity: 0.95; }
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #101922;
+  border: 1px solid #334458;
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.85rem;
+  color: #e9f0f8;
+  max-width: 280px;
+  z-index: 5;
+}
+.hidden { display: none; }
+
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: 1fr; }
+  #worldMap { height: 62vh; }
+}
