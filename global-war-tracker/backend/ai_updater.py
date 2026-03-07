@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from datetime import date
 import hashlib
-from pathlib import Path
 from typing import Any
 import json
 import os
@@ -74,28 +73,57 @@ def analyze_headlines_with_mock_ai(headlines: list[str]) -> list[dict[str, Any]]
 
 
 def analyze_headlines_with_openai(headlines: list[str]) -> list[dict[str, Any]]:
-    """Analyze headlines via OpenAI using requested prompt logic."""
+    """Analyze headlines via OpenAI using requested prompt logic.
+
+    Important local-first behavior:
+    - If OpenAI request fails (network/auth/rate limit), gracefully fall back
+      to mock keyword mode instead of crashing the update pipeline.
+    """
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key or OpenAI is None:
         return analyze_headlines_with_mock_ai(headlines)
 
-    client = OpenAI(api_key=api_key)
-    prompt = (
-        "Identify whether this headline describes a military conflict, war, invasion, "
-        "or armed clash. If yes, extract location, country, short description and "
-        "possible start date. Return JSON list with keys: "
-        "is_conflict,country,location,description,possible_start_date.\n\n"
-        + "\n".join(f"- {h}" for h in headlines)
-    )
-
-    completion = client.responses.create(model="gpt-4.1-mini", input=prompt)
-    text_output = completion.output_text
-
     try:
-        return json.loads(text_output)
-    except json.JSONDecodeError:
+        client = OpenAI(api_key=api_key)
+        prompt = (
+            "Identify whether this headline describes a military conflict, war, invasion, "
+            "or armed clash. If yes, extract location, country, short description and "
+            "possible start date. Return JSON list with keys: "
+            "is_conflict,country,location,description,possible_start_date.\n\n"
+            + "\n".join(f"- {h}" for h in headlines)
+        )
+
+        completion = client.responses.create(model="gpt-4.1-mini", input=prompt)
+        text_output = completion.output_text
+        return _parse_openai_json_output(text_output)
+    except Exception:
+        # Any OpenAI transport/auth/API error degrades to offline-safe mode.
         return analyze_headlines_with_mock_ai(headlines)
+
+
+def _parse_openai_json_output(text_output: str) -> list[dict[str, Any]]:
+    """Parse model output into JSON records with tolerant fallback.
+
+    The model may return plain JSON or JSON wrapped in markdown fences.
+    This helper normalizes both formats before parsing.
+    """
+
+    cleaned = text_output.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].lstrip()
+
+    parsed = json.loads(cleaned)
+    if isinstance(parsed, list):
+        return parsed
+    return []
 
 
 def convert_analysis_to_conflicts(analysis: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -108,9 +136,12 @@ def convert_analysis_to_conflicts(analysis: list[dict[str, Any]]) -> list[dict[s
 
         country = item.get("country") or "Unknown"
         slug_country = country.lower().replace(" ", "-")
-        digest = hashlib.md5((country + (item.get("description") or "")).encode("utf-8")).hexdigest()[:8]
+        # Stable ID by signal content only (no current date) so repeated
+        # headlines across days deduplicate correctly.
+        digest_source = f"{country}|{item.get('description') or ''}".encode("utf-8")
+        digest = hashlib.md5(digest_source).hexdigest()[:12]
         record = {
-            "id": f"auto-{slug_country}-{date.today()}-{digest}",
+            "id": f"auto-{slug_country}-{digest}",
             "name": f"Potential escalation in {country}",
             "country": country,
             # Coordinates unknown in headline-only extraction; defaults are placeholders.
