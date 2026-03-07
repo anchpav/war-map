@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GLOBAL WAR TRACKER • MVP</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>GLOBAL WAR TRACKER</h1>
+      <p>MVP: карта, поиск страны, дни без войны, активные конфликты</p>
+    </header>
+
+    <main class="layout">
+      <aside class="panel">
+        <h2>Фильтры</h2>
+
+        <label for="countrySearch">Страна (поиск)</label>
+        <input id="countrySearch" type="text" list="countryOptions" placeholder="Например: Germany" />
+        <datalist id="countryOptions"></datalist>
+
+        <div class="row">
+          <button id="useMyLocation" type="button">Моя страна</button>
+          <button id="clearCountry" type="button">Сброс</button>
+        </div>
+
+        <label for="yearSlider">Год: <span id="yearLabel">2026</span></label>
+        <input id="yearSlider" type="range" min="1900" max="2026" value="2026" />
+
+        <label for="aiMode">Режим обновления</label>
+        <select id="aiMode">
+          <option value="reload" selected>Только перезагрузка данных</option>
+          <option value="ai">Сначала AI update</option>
+        </select>
+
+        <button id="refreshData" type="button">Refresh Data</button>
+
+        <h2>Метрики</h2>
+        <p>Дней без войны: <strong id="daysWithoutWar">0</strong></p>
+        <p>Активных конфликтов: <strong id="activeConflicts">0</strong></p>
+        <p>Всего конфликтов с 1900: <strong id="totalConflicts">0</strong></p>
+
+        <h2>Активные конфликты</h2>
+        <ul id="activeConflictsList" class="conflict-list"></ul>
+      </aside>
+
+      <section class="map-wrap">
+        <div class="timeline-controls">
+          <button id="playTimeline" type="button">▶ Play</button>
+          <button id="pauseTimeline" type="button">⏸ Pause</button>
+          <span id="timelineStatus">Timeline idle</span>
+        </div>
+        <div id="map"></div>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
