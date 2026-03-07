@@ -5,6 +5,10 @@
   --selected: #0ea5e9;
   --line: #ef4444;
   --text: #e2e8f0;
+
+  --ocean: #0b1f33;
+  --land: #1e293b;
+  --land-border: #3b4a61;
 }
 
 * {
@@ -36,6 +40,8 @@ body {
   padding: 0.75rem;
 }
 
+/* SEARCH PANEL */
+
 .search-panel {
   display: grid;
   gap: 0.4rem;
@@ -49,6 +55,8 @@ body {
   background: #0b1220;
   color: var(--text);
 }
+
+/* METRICS */
 
 .metrics-grid {
   display: grid;
@@ -68,19 +76,26 @@ body {
   font-size: 1.7rem;
 }
 
+/* MAP PANEL */
+
 .map-panel {
   padding: 0;
   overflow: hidden;
 }
 
+/* SVG MAP */
+
 .world-svg {
   display: block;
   width: 100%;
+  background: var(--ocean);
 }
 
+/* COUNTRIES */
+
 .country {
-  fill: #1e293b;
-  stroke: #3b4a61;
+  fill: var(--land);
+  stroke: var(--land-border);
   stroke-width: 0.6;
   cursor: pointer;
   transition: fill 0.18s ease;
@@ -94,7 +109,19 @@ body {
   fill: var(--selected);
 }
 
-/* Dashed + pulse animation for "war arrow" effect. */
+/* COUNTRY LABELS */
+
+.country-label {
+  fill: #e2e8f0;
+  font-size: 9px;
+  text-anchor: middle;
+  pointer-events: none;
+  opacity: 0.75;
+  user-select: none;
+}
+
+/* CONFLICT LINES */
+
 .conflict-line {
   fill: none;
   stroke: var(--line);
@@ -104,11 +131,15 @@ body {
   animation: lineDash 1.2s linear infinite, linePulse 2.5s ease-in-out infinite;
 }
 
+/* DASH ANIMATION */
+
 @keyframes lineDash {
   to {
     stroke-dashoffset: -30;
   }
 }
+
+/* PULSE EFFECT */
 
 @keyframes linePulse {
   0%,
@@ -120,16 +151,22 @@ body {
   }
 }
 
+/* FOOTER */
+
 .footer-panel {
   min-height: 48px;
   display: flex;
   align-items: center;
 }
 
+/* ERROR STATE */
+
 .error {
   border-color: #ef4444;
   color: #fecaca;
 }
+
+/* MOBILE */
 
 @media (max-width: 900px) {
   .metrics-grid {
