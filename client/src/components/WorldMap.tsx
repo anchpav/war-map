@@ -2,6 +2,8 @@ import { geoMercator, geoPath, type GeoProjection, type GeoPermissibleObjects } 
 import { useMemo, useRef, useState, useEffect } from 'react'
 import type { Conflict } from '../types'
 import { ConflictLines } from './ConflictLines'
+import { zoom, zoomIdentity } from 'd3-zoom'
+import { select } from 'd3-selection'
 
 type WorldMapProps = {
   geoData: any
