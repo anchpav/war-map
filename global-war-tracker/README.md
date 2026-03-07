@@ -14,11 +14,11 @@ A local-first full-stack project for visualizing armed conflicts since 1900.
   - Total conflicts since 1900
   - Days Without War
   - Global Military Tension Index
-- Year slider + country multi-select filters
+- Settings panel (⚙️) with year slider, country multi-select, and AI mode selector
 - AI update pipeline with **OpenAI mode** + **offline mock mode**
 - Timeline animation and basic conflict-zone prediction placeholder
 
-## Project structure
+## Project Structure
 
 ```text
 global-war-tracker/
@@ -37,46 +37,3 @@ global-war-tracker/
   scripts/
     update_conflicts.py
   README.md
-```
-
-## Run locally
-
-```bash
-cd global-war-tracker
-python -m pip install flask feedparser openai
-python -m backend.server
-```
-
-Open: `http://localhost:5000`
-
-## Run AI update script
-
-```bash
-cd global-war-tracker
-python scripts/update_conflicts.py
-```
-
-### Mock mode behavior
-
-If `OPENAI_API_KEY` is missing, updater automatically uses local keyword detection:
-- war
-- invasion
-- military strike
-- armed conflict
-- missile attack
-- clash
-
-This guarantees local/offline operation.
-
-## API endpoints
-
-- `GET /api/conflicts`
-- `GET /api/history`
-- `GET /api/metrics`
-- `POST /api/ai-update`
-
-## Extend later with real APIs
-
-- Add geocoding in `ai_updater.py` for precise coordinates.
-- Add dedicated source connectors in `data_sources.py`.
-- Replace placeholder prediction with ML model using historical data.
