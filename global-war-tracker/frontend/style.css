@@ -1,0 +1,57 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #11151c;
+  color: #eef2f6;
+}
+
+header, .toolbar, .metrics, .timeline-controls {
+  width: min(1200px, 95vw);
+  margin: 0.7rem auto;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+}
+
+input, button {
+  padding: 0.5rem;
+  border: 1px solid #2f3c4d;
+  border-radius: 8px;
+  background: #161d27;
+  color: #eef2f6;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.metrics > div {
+  background: #161d27;
+  border: 1px solid #2f3c4d;
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.timeline-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+#map {
+  width: min(1200px, 95vw);
+  height: 70vh;
+  margin: 0 auto 1rem;
+  border: 1px solid #2f3c4d;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .toolbar { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: 1fr; }
+}

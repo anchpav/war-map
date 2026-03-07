@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global War Tracker MVP</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Global War Tracker</h1>
+      <p>Minimal MVP</p>
+    </header>
+
+    <section class="toolbar">
+      <input id="countrySearch" type="text" list="countryList" placeholder="Search country" />
+      <datalist id="countryList"></datalist>
+      <button id="clearFilter">Clear</button>
+      <button id="refreshData">Refresh Data</button>
+    </section>
+
+    <section class="metrics">
+      <div>Days Without War (Global): <strong id="daysGlobal">0</strong></div>
+      <div>Days Without War (Selected): <strong id="daysCountry">0</strong></div>
+      <div>Active Conflicts: <strong id="activeCount">0</strong></div>
+      <div>Total Conflicts: <strong id="totalCount">0</strong></div>
+    </section>
+
+    <section class="timeline-controls">
+      <button id="playTimeline">Play</button>
+      <button id="pauseTimeline">Pause</button>
+      <span id="timelineStatus">Timeline idle</span>
+    </section>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
