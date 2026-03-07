@@ -41,6 +41,15 @@ global-war-tracker/
 
 ## Run locally
 
+### Option A (from repository root)
+
+```bash
+python -m pip install -r global-war-tracker/requirements.txt
+python global-war-tracker/scripts/run_server.py
+```
+
+### Option B (from project directory)
+
 ```bash
 cd global-war-tracker
 python -m pip install -r requirements.txt
@@ -103,3 +112,12 @@ Then open a Pull Request in GitHub and merge it into your main branch.
 cd global-war-tracker
 python -m unittest discover -s tests -p "test_*.py"
 ```
+
+
+## Troubleshooting server startup
+
+If you see `ModuleNotFoundError: No module named 'backend'`, you are likely running
+`python -m backend.server` from the repository root. Use either:
+
+- `python global-war-tracker/scripts/run_server.py` from root, or
+- `cd global-war-tracker` then `python -m backend.server`.

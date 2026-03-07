@@ -15,6 +15,7 @@ from .ai_updater import run_ai_update_pipeline
 from .conflict_parser import (
     calculate_days_without_war,
     calculate_global_tension_index,
+    filter_conflicts_by_country,
     load_conflicts,
     load_history,
 )
@@ -76,10 +77,12 @@ def api_metrics():
     history = load_history()
 
     country = request.args.get("country", type=str)
-    days_without_war = calculate_days_without_war(conflicts, country=country)
-    active_conflicts = sum(1 for c in conflicts if c.get("end") is None)
+    scoped_conflicts = filter_conflicts_by_country(conflicts, country)
+
+    days_without_war = calculate_days_without_war(scoped_conflicts)
+    active_conflicts = sum(1 for c in scoped_conflicts if c.get("end") is None)
     total_conflicts_since_1900 = len(history)
-    tension_index = calculate_global_tension_index(conflicts, history)
+    tension_index = calculate_global_tension_index(scoped_conflicts, history)
 
     return jsonify(
         {
