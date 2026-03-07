@@ -10,7 +10,7 @@ app.use(cors())
 app.use(express.json())
 
 // path to conflicts data
-const dataPath = path.join(process.cwd(), "client/public/data/conflicts.json")
+const dataPath = path.join(__dirname, "../client/public/data/conflicts.json")
 
 // API endpoint for conflicts
 app.get("/api/conflicts", (req, res) => {
