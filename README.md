@@ -1,65 +1,72 @@
-# Global Conflict Tracker (GitHub Pages)
+# Global War Tracker (Minimal MVP)
 
-Static web project that displays global conflict events on a Leaflet map with no server-side code.
+A beginner-friendly MVP with:
 
-## What it does
+- **React + Vite + D3** frontend
+- **Express** backend
+- Local `GeoJSON` world map and local conflict dataset
 
-- Loads conflict data with `fetch()` from an **online JSON URL** (`CONFLICTS_URL` in `script.js`).
-- Uses a **local fallback** (`conflicts.json`) for testing/demo reliability.
-- Renders:
-  - red conflict markers,
-  - yellow lines between `actor1` and `actor2`,
-  - heatmap overlay,
-  - popup with title, description, country.
-- Provides filters:
-  - year range filter,
-  - dynamic country multi-select (all countries discovered from JSON).
-- Shows **"Data unavailable"** if the online/local JSON cannot be loaded.
+## Project structure
 
-## Files
+```text
+client/
+  src/
+    components/
+      WorldMap.tsx
+      ConflictLines.tsx
+      CountrySearch.tsx
+      MetricsPanel.tsx
+    services/
+      conflictService.ts
+      geoService.ts
+    types/
+      index.ts
+    App.tsx
+    main.tsx
+  public/
+    data/
+      conflicts.json
+      world.geo.json
 
-- `index.html`
-- `style.css`
-- `script.js`
-- `conflicts.json` (sample, 5+ countries)
-
-## Configure your online source
-
-In `script.js`:
-
-```js
-const CONFLICTS_URL = "https://raw.githubusercontent.com/USERNAME/repo/main/conflicts.json";
-const CONFLICTS_FALLBACK_URL = "./conflicts.json";
+server/
+  index.js
 ```
 
-Replace `CONFLICTS_URL` with your real raw JSON URL.
+## Install
 
-Expected JSON item shape:
-
-```json
-{
-  "id": 1,
-  "lat": 50.4501,
-  "lon": 30.5234,
-  "title": "Conflict in Country A",
-  "description": "Ongoing clashes",
-  "country": "Country A",
-  "year": 2026,
-  "actor1": {"lat": 50.45, "lon": 30.52, "name": "Side A"},
-  "actor2": {"lat": 50.46, "lon": 30.53, "name": "Side B"}
-}
-```
-
-## Run locally
+### Backend
 
 ```bash
-python3 -m http.server 8080
+cd server
+npm install
+node index.js
 ```
 
-Open: `http://localhost:8080`
+Backend runs at `http://localhost:3001`.
 
-## GitHub Pages
+### Frontend
 
-1. Push repository to GitHub.
-2. Enable Pages for branch root.
-3. Open the generated Pages URL.
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Frontend runs at `http://localhost:5173`.
+
+## API
+
+- `GET /api/conflicts` - reads and returns `client/public/data/conflicts.json`
+
+## Features
+
+- SVG world map rendered from `world.geo.json` using `d3.geoMercator`
+- Country hover + click selection
+- Country search with autocomplete
+- Animated dashed conflict lines
+- Metrics:
+  - total conflicts
+  - active conflicts
+  - days without war (world)
+  - days without war (selected country)
+- Friendly error messages when server/data is unavailable
