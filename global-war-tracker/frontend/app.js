@@ -1,26 +1,47 @@
 /*
   GLOBAL WAR TRACKER frontend logic
   ---------------------------------
-  This file handles:
-  - Fetching data/metrics from the Flask backend
-  - Rendering conflict markers with status color coding
-  - Country + year filtering
-  - Basic advanced analytics (prediction + timeline animation)
+  Simplified UI:
+  - Fewer buttons on the dashboard
+  - Settings moved into a collapsible settings panel
+  - AI manual update button removed (mode is now configured in settings)
+  - Improved map navigation with better base map options + fit-to-data behavior
 */
 
 const API_BASE = "";
-const map = L.map("map").setView([20, 0], 2);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap contributors",
-}).addTo(map);
+const map = L.map("map", {
+  worldCopyJump: true,
+  zoomSnap: 0.25,
+  zoomDelta: 0.5,
+  minZoom: 2,
+  maxZoom: 8,
+  zoomControl: false,
+  preferCanvas: true,
+}).setView([20, 0], 2.25);
+
+const baseLayers = {
+  "Dark (clean)": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: "© OpenStreetMap © CARTO",
+  }),
+  "Light (detailed)": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors",
+  }),
+};
+
+baseLayers["Dark (clean)"].addTo(map);
+L.control.zoom({ position: "bottomright" }).addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
+L.control.layers(baseLayers, null, { position: "topright", collapsed: true }).addTo(map);
 
 const layerGroup = L.layerGroup().addTo(map);
 
+const settingsPanel = document.getElementById("settingsPanel");
+const toggleSettingsButton = document.getElementById("toggleSettings");
 const yearSlider = document.getElementById("yearSlider");
 const yearLabel = document.getElementById("yearLabel");
 const countryFilter = document.getElementById("countryFilter");
-const runAiUpdateButton = document.getElementById("runAiUpdate");
+const aiUpdateMode = document.getElementById("aiUpdateMode");
 const playAnimationButton = document.getElementById("playAnimation");
 
 const activeConflictsEl = document.getElementById("activeConflicts");
@@ -32,12 +53,6 @@ const predictionEl = document.getElementById("prediction");
 let conflicts = [];
 let history = [];
 
-/**
- * Return marker color based on conflict status.
- * - Red: active conflict (end === null)
- * - Orange: conflict ended in last 10 years
- * - Gray: older historical conflict
- */
 function getMarkerColor(conflict) {
   if (conflict.end === null) return "#ff4d4d";
 
@@ -46,9 +61,6 @@ function getMarkerColor(conflict) {
   return yearsSinceEnd <= 10 ? "#ff9f43" : "#a0a0a0";
 }
 
-/**
- * Build a Leaflet circle marker with color-coded status and popup details.
- */
 function buildConflictMarker(conflict) {
   const marker = L.circleMarker([conflict.lat, conflict.lon], {
     radius: 7,
@@ -67,9 +79,6 @@ function buildConflictMarker(conflict) {
   return marker;
 }
 
-/**
- * Filter conflicts using selected year and selected countries.
- */
 function getFilteredConflicts() {
   const selectedYear = Number(yearSlider.value);
   const selectedCountries = Array.from(countryFilter.selectedOptions).map((o) => o.value);
@@ -85,18 +94,23 @@ function getFilteredConflicts() {
   });
 }
 
-/**
- * Render filtered markers onto the map.
- */
+function fitMapToConflicts(filtered) {
+  if (!filtered.length) {
+    map.setView([20, 0], 2.25);
+    return;
+  }
+
+  const bounds = L.latLngBounds(filtered.map((c) => [c.lat, c.lon]));
+  map.fitBounds(bounds, { padding: [35, 35], maxZoom: 5.75 });
+}
+
 function renderMap() {
   layerGroup.clearLayers();
   const filtered = getFilteredConflicts();
   filtered.forEach((conflict) => layerGroup.addLayer(buildConflictMarker(conflict)));
+  fitMapToConflicts(filtered);
 }
 
-/**
- * Populate the country multi-select based on loaded conflicts.
- */
 function populateCountryFilter() {
   const countries = [...new Set(conflicts.map((c) => c.country))].sort();
   countryFilter.innerHTML = "";
@@ -109,9 +123,6 @@ function populateCountryFilter() {
   });
 }
 
-/**
- * Load dashboard metrics from backend.
- */
 async function loadMetrics() {
   const selectedCountries = Array.from(countryFilter.selectedOptions).map((o) => o.value);
   const countryQuery = selectedCountries.length === 1 ? `?country=${encodeURIComponent(selectedCountries[0])}` : "";
@@ -127,11 +138,8 @@ async function loadMetrics() {
     tensionIndexEl.textContent = metrics.global_military_tension_index;
     return;
   } catch (error) {
-    // Local fallback mode: compute metrics in browser when backend API is unavailable.
     const selectedCountry = selectedCountries.length === 1 ? selectedCountries[0] : null;
-    const target = selectedCountry
-      ? conflicts.filter((c) => c.country === selectedCountry)
-      : conflicts;
+    const target = selectedCountry ? conflicts.filter((c) => c.country === selectedCountry) : conflicts;
 
     const active = target.filter((c) => c.end === null).length;
     const total = history.length;
@@ -155,10 +163,6 @@ async function loadMetrics() {
   }
 }
 
-/**
- * A simple heuristic "AI prediction" placeholder.
- * We pick the region with the most active conflicts and report it.
- */
 function updatePrediction() {
   const active = conflicts.filter((c) => c.end === null);
   if (active.length === 0) {
@@ -175,9 +179,6 @@ function updatePrediction() {
   predictionEl.textContent = `Potential next conflict zone: ${topCountry} (active-signal score: ${topCount}).`;
 }
 
-/**
- * Animate timeline by sweeping year slider from 1900 to current max.
- */
 function animateTimeline() {
   let year = 1900;
   const maxYear = Number(yearSlider.max);
@@ -194,22 +195,6 @@ function animateTimeline() {
   }, 120);
 }
 
-async function runAiUpdate() {
-  runAiUpdateButton.disabled = true;
-  runAiUpdateButton.textContent = "Updating...";
-
-  try {
-    await fetch(`${API_BASE}/api/ai-update`, { method: "POST" });
-    await bootstrap();
-  } finally {
-    runAiUpdateButton.disabled = false;
-    runAiUpdateButton.textContent = "Run AI Auto Update";
-  }
-}
-
-/**
- * Load all core data and render dashboard.
- */
 async function bootstrap() {
   try {
     const [conflictResponse, historyResponse] = await Promise.all([
@@ -222,7 +207,6 @@ async function bootstrap() {
     conflicts = await conflictResponse.json();
     history = await historyResponse.json();
   } catch (error) {
-    // Local-first fallback path for static hosting without Flask.
     const [conflictResponse, historyResponse] = await Promise.all([
       fetch("../data/conflicts.json"),
       fetch("../data/history_1900.json"),
@@ -231,7 +215,6 @@ async function bootstrap() {
     history = await historyResponse.json();
   }
 
-  // Keep year slider bounded to newest known conflict start year.
   const maxKnownYear = Math.max(...conflicts.map((c) => Number(c.start.slice(0, 4))), 1900);
   yearSlider.max = String(Math.max(maxKnownYear, new Date().getFullYear()));
 
@@ -240,6 +223,10 @@ async function bootstrap() {
   await loadMetrics();
   updatePrediction();
 }
+
+toggleSettingsButton.addEventListener("click", () => {
+  settingsPanel.classList.toggle("hidden");
+});
 
 yearSlider.addEventListener("input", () => {
   yearLabel.textContent = yearSlider.value;
@@ -251,7 +238,12 @@ countryFilter.addEventListener("change", async () => {
   await loadMetrics();
 });
 
-runAiUpdateButton.addEventListener("click", runAiUpdate);
+// For now this is configuration-only (no manual trigger button).
+aiUpdateMode.addEventListener("change", () => {
+  const mode = aiUpdateMode.value;
+  console.info(`AI update mode set to: ${mode}`);
+});
+
 playAnimationButton.addEventListener("click", animateTimeline);
 
 bootstrap();

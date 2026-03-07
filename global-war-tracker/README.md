@@ -14,7 +14,7 @@ A local-first full-stack project for visualizing armed conflicts since 1900.
   - Total conflicts since 1900
   - Days Without War
   - Global Military Tension Index
-- Year slider + country multi-select filters
+- Settings panel (⚙️) with year slider, country multi-select, and AI mode selector
 - AI update pipeline with **OpenAI mode** + **offline mock mode**
 - Timeline animation and basic conflict-zone prediction placeholder
 
@@ -68,12 +68,27 @@ If `OPENAI_API_KEY` is missing, updater automatically uses local keyword detecti
 
 This guarantees local/offline operation.
 
+
+## GitHub update workflow
+
+Use this short flow whenever you need to update files in GitHub:
+
+```bash
+cd global-war-tracker
+python -m pip install -r requirements.txt
+git add .
+git commit -m "Update GLOBAL WAR TRACKER files"
+git push origin <your-branch>
+```
+
+Then open a Pull Request in GitHub and merge it into your main branch.
+
 ## API endpoints
 
 - `GET /api/conflicts`
 - `GET /api/history`
 - `GET /api/metrics`
-- `POST /api/ai-update`
+- `POST /api/ai-update` (kept for backend/scheduler usage; manual UI trigger removed)
 
 ## Extend later with real APIs
 
