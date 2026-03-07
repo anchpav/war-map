@@ -1,0 +1,138 @@
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --hover: #38bdf8;
+  --selected: #0ea5e9;
+  --line: #ef4444;
+  --text: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-shell {
+  width: min(1200px, 95vw);
+  margin: 1rem auto;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.search-panel {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.search-panel input {
+  width: 100%;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 0.55rem;
+  background: #0b1220;
+  color: var(--text);
+}
+
+.metrics-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-card span {
+  display: block;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.7rem;
+}
+
+.map-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.world-svg {
+  display: block;
+  width: 100%;
+}
+
+.country {
+  fill: #1e293b;
+  stroke: #3b4a61;
+  stroke-width: 0.6;
+  cursor: pointer;
+  transition: fill 0.18s ease;
+}
+
+.country:hover {
+  fill: var(--hover);
+}
+
+.country.selected {
+  fill: var(--selected);
+}
+
+/* Dashed + pulse animation for "war arrow" effect. */
+.conflict-line {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 8 7;
+  animation: lineDash 1.2s linear infinite, linePulse 2.5s ease-in-out infinite;
+}
+
+@keyframes lineDash {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+@keyframes linePulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.footer-panel {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+.error {
+  border-color: #ef4444;
+  color: #fecaca;
+}
+
+@media (max-width: 900px) {
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
