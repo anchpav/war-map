@@ -136,3 +136,11 @@ def calculate_global_tension_index(conflicts: list[dict], history: list[dict]) -
 
     raw_score = (active * 6) + (recent * 3) + (len(history) / 20)
     return round(min(raw_score, 100), 2)
+
+
+def filter_conflicts_by_country(conflicts: list[dict], country: Optional[str] = None) -> list[dict]:
+    """Return country-filtered conflicts when a country is selected."""
+
+    if not country:
+        return conflicts
+    return [c for c in conflicts if c.get("country", "").lower() == country.lower()]
