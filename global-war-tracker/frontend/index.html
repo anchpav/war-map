@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GLOBAL WAR TRACKER</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>GLOBAL WAR TRACKER</h1>
+        <p>Conflicts since 1900 + local-first analytics dashboard</p>
+      </div>
+      <button id="toggleSettings" type="button" class="icon-btn" aria-label="Open settings">⚙️</button>
+    </header>
+
+    <main>
+      <section class="stats-panel">
+        <article class="stat-card">
+          <h2>Active Conflicts</h2>
+          <p id="activeConflicts">0</p>
+        </article>
+        <article class="stat-card">
+          <h2>Total Conflicts since 1900</h2>
+          <p id="totalConflicts">0</p>
+        </article>
+        <article class="stat-card highlight">
+          <h2>Days Without War</h2>
+          <p id="daysWithoutWar">0</p>
+        </article>
+        <article class="stat-card">
+          <h2>Global Military Tension Index</h2>
+          <p id="tensionIndex">0</p>
+        </article>
+      </section>
+
+      <section id="settingsPanel" class="settings-panel hidden">
+        <h3>Settings</h3>
+        <div class="settings-grid">
+          <div>
+            <label for="yearSlider">Year Filter:</label>
+            <input id="yearSlider" type="range" min="1900" max="2026" value="2026" />
+            <span id="yearLabel">2026</span>
+          </div>
+          <div>
+            <label for="countryFilter">Country Filter (multi-select):</label>
+            <select id="countryFilter" multiple></select>
+          </div>
+          <div>
+            <label for="aiUpdateMode">AI Update Mode:</label>
+            <select id="aiUpdateMode">
+              <option value="off" selected>Off (local only)</option>
+              <option value="backend">Use backend scheduler/API</option>
+            </select>
+            <small>Manual AI update button removed for simpler UI.</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="analytics">
+        <h3>Advanced Analytics</h3>
+        <p id="prediction">Potential next conflict zone: calculating...</p>
+        <button id="playAnimation" type="button">Animate Wars Since 1900</button>
+      </section>
+
+      <section id="map"></section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
