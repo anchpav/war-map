@@ -1,71 +1,38 @@
-"""Flask backend for minimal Global War Tracker MVP."""
+"""Minimal Flask API for Global War Tracker MVP.
+
+Only essential backend functionality is included:
+- Serve frontend files
+- Serve local conflict data via /api/conflicts
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
-from flask import Flask, jsonify, request, send_from_directory
-
-from .data_handler import (
-    calculate_days_without_war,
-    get_active_conflicts,
-    load_conflicts,
-)
+from flask import Flask, jsonify, send_from_directory
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
-DATA_DIR = PROJECT_ROOT / "data"
+DATA_FILE = PROJECT_ROOT / "data" / "conflicts.json"
 
 app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
 
 
 @app.route("/")
 def index():
-    """Serve single-page frontend."""
+    """Serve the minimal web UI."""
 
     return send_from_directory(FRONTEND_DIR, "index.html")
 
 
 @app.route("/api/conflicts")
 def api_conflicts():
-    """Return all conflicts (active + ended)."""
+    """Return conflicts from local JSON file."""
 
-    return jsonify(load_conflicts())
-
-
-@app.route("/api/active_conflicts")
-def api_active_conflicts():
-    """Return active conflicts, optionally filtered by country.
-
-    Query:
-        /api/active_conflicts?country=Ukraine
-    """
-
-    country = request.args.get("country", type=str)
-    conflicts = load_conflicts()
-    return jsonify(get_active_conflicts(conflicts, country=country))
-
-
-@app.route("/api/days_without_war")
-def api_days_without_war():
-    """Return days without war globally or for selected country.
-
-    Query:
-        /api/days_without_war
-        /api/days_without_war?country=Germany
-    """
-
-    country = request.args.get("country", type=str)
-    conflicts = load_conflicts()
-    days = calculate_days_without_war(conflicts, country=country)
-    return jsonify({"country": country or "global", "days_without_war": days})
-
-
-@app.route("/data/conflicts.json")
-def raw_conflicts_file():
-    """Serve raw local JSON for manual inspection/debug."""
-
-    return send_from_directory(DATA_DIR, "conflicts.json")
+    with DATA_FILE.open("r", encoding="utf-8") as file:
+        conflicts = json.load(file)
+    return jsonify(conflicts)
 
 
 if __name__ == "__main__":

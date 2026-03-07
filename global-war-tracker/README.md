@@ -1,22 +1,17 @@
-# Global War Tracker (Minimal Working MVP)
+# Global War Tracker — Minimal Working Version
 
-A minimal local-first application for tracking armed conflicts and showing **Days Without War**.
+This is a minimal, runnable version of Global War Tracker with:
 
-## What this MVP includes
-
-- **Custom minimalist world map** built with **SVG + plain JavaScript** (no Leaflet / no tile providers).
-- **Clickable countries** (simplified shapes) and **country search**.
-- **Pan + zoom** with mouse and touch gestures.
-- **Animated conflict lines/arrows** shown in timeline order.
-- **Hover tooltip** on conflict lines with:
-  - Country names
-  - Start and end dates
-  - Conflict type
-- **Days Without War** metric:
-  - Global
-  - Selected country
-- **Active conflicts list**
-- **Refresh Data** button to reload `conflicts.json` from backend.
+- Leaflet world map (zoom + pan)
+- Country search/filter
+- Conflict markers + popups
+- Animated conflict lines/arrows (timeline play/pause)
+- Metrics:
+  - Days Without War (global)
+  - Days Without War (selected country)
+  - Active conflicts
+  - Total conflicts
+- Local `conflicts.json` data source
 
 ## Project structure
 
@@ -29,66 +24,67 @@ global-war-tracker/
     conflicts.json
   frontend/
     index.html
+    script.js
     style.css
-    app.js
+    conflicts.json
   scripts/
     run_server.py
   README.md
 ```
 
-## Requirements
+## Data format
 
-- Python 3.x
-- Flask
+`data/conflicts.json` entries include required fields:
 
-Install:
+```json
+{
+  "id": "unique-id",
+  "country": "Country A",
+  "lat": 0,
+  "lon": 0,
+  "start": "YYYY-MM-DD",
+  "end": null,
+  "description": "Conflict type"
+}
+```
+
+(For arrow visualization, optional fields `opponent`, `opponentLat`, `opponentLon` are used.)
+
+## Run locally (recommended)
+
+1. Install dependencies:
 
 ```bash
 python -m pip install -r global-war-tracker/requirements.txt
 ```
 
-## Run locally
-
-From repository root:
+2. Start backend from repository root:
 
 ```bash
 python global-war-tracker/scripts/run_server.py
 ```
 
-Then open:
+3. Open app:
 
 ```text
 http://localhost:5000
 ```
 
-## Backend API
+## Frontend-only local fallback
 
-- `GET /api/days_without_war?country=<country>`
-  - Returns days without war globally or for selected country.
-- `GET /api/active_conflicts?country=<country>`
-  - Returns active conflicts globally or filtered by country.
-- `GET /api/conflicts`
-  - Returns all conflicts from `conflicts.json`.
-- `GET /data/conflicts.json`
-  - Serves raw JSON file.
+If backend is unavailable, frontend can still load local data from `frontend/conflicts.json`.
 
-## Data format (`conflicts.json`)
-
-```json
-[
-  {
-    "country": "Country A",
-    "opponent": "Country B",
-    "start": "YYYY-MM-DD",
-    "end": null,
-    "lat": 0,
-    "lon": 0
-  }
-]
+```bash
+cd global-war-tracker/frontend
+python -m http.server 8080
 ```
 
-## Notes
+Open:
 
-- This MVP intentionally uses simplified country geometry for a lightweight custom map.
-- The map is designed to be easy to extend with richer SVG paths later.
-- Geolocation-based country detection depends on browser permissions.
+```text
+http://localhost:8080
+```
+
+## API
+
+- `GET /api/conflicts` → all conflicts from local JSON
