@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GLOBAL WAR TRACKER</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>GLOBAL WAR TRACKER</h1>
+        <p>Conflicts since 1900 • live metrics • animated timelines</p>
+      </div>
+
+      <details class="filters-dropdown">
+        <summary>Filters & Settings ▾</summary>
+        <div class="dropdown-content">
+          <label for="countryFilter">Countries</label>
+          <select id="countryFilter" multiple></select>
+
+          <label for="yearSlider">Year: <span id="yearLabel">2026</span></label>
+          <input id="yearSlider" type="range" min="1900" max="2026" value="2026" />
+
+          <label for="aiUpdateMode">Refresh mode</label>
+          <select id="aiUpdateMode">
+            <option value="reload" selected>Reload local/backend data</option>
+            <option value="ai">Run AI update then reload</option>
+          </select>
+
+          <button id="refreshData" type="button">Refresh Data</button>
+        </div>
+      </details>
+    </header>
+
+    <main>
+      <section class="stats-panel">
+        <article class="stat-card">
+          <h2>Active Conflicts</h2>
+          <p id="activeConflicts">0</p>
+        </article>
+        <article class="stat-card">
+          <h2>Total Conflicts since 1900</h2>
+          <p id="totalConflicts">0</p>
+        </article>
+        <article class="stat-card highlight">
+          <h2>Days Without War</h2>
+          <p id="daysWithoutWar">0</p>
+        </article>
+        <article class="stat-card">
+          <h2>Global Military Tension Index</h2>
+          <p id="tensionIndex">0</p>
+        </article>
+      </section>
+
+      <section class="timeline-controls">
+        <button id="playTimeline" type="button">▶ Play</button>
+        <button id="pauseTimeline" type="button">⏸ Pause</button>
+        <span id="timelineStatus">Timeline idle</span>
+      </section>
+
+      <section id="map"></section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

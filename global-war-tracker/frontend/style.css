@@ -1,0 +1,102 @@
+:root {
+  --bg: #0f1218;
+  --panel: #151a22;
+  --text: #edf2f7;
+  --muted: #9aa6b2;
+  --active: #ff4d4d;
+  --recent: #ff9f43;
+  --historic: #9aa0a6;
+  --border: #293241;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
+main, .topbar { width: min(1220px, 96vw); margin: 0 auto; }
+
+.topbar {
+  padding: 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.topbar p { margin: 0.3rem 0 0; color: var(--muted); }
+
+.filters-dropdown {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.35rem 0.55rem;
+  min-width: 320px;
+}
+
+.filters-dropdown > summary { cursor: pointer; user-select: none; color: var(--text); }
+
+.dropdown-content {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.dropdown-content label { color: var(--muted); font-size: 0.9rem; }
+
+#countryFilter,
+#aiUpdateMode,
+#yearSlider,
+button {
+  width: 100%;
+  background: #111823;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem;
+}
+
+#countryFilter { min-height: 84px; }
+button { cursor: pointer; }
+
+.stats-panel,
+.timeline-controls {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.stats-panel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; }
+.stat-card { border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem; }
+.stat-card h2 { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.stat-card p { margin: 0.4rem 0 0; font-size: 1.7rem; font-weight: bold; }
+.highlight p { color: var(--recent); }
+
+.timeline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.timeline-controls button { width: auto; min-width: 110px; }
+#timelineStatus { color: var(--muted); }
+
+#map {
+  height: 70vh;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.2rem;
+}
+
+.leaflet-tooltip.conflict-tooltip {
+  background: #0f1722;
+  color: #e8eef7;
+  border: 1px solid #2f3b4d;
+}
+
+@media (max-width: 980px) {
+  .topbar { flex-direction: column; }
+  .filters-dropdown { width: 100%; }
+  .stats-panel { grid-template-columns: 1fr; }
+  #map { height: 62vh; }
+}
