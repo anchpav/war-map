@@ -4,20 +4,15 @@ A local-first full-stack project for visualizing armed conflicts since 1900.
 
 ## Features
 
-- Interactive Leaflet world map with conflict markers
-- Marker color coding:
-  - **Red** = active conflict (`end = null`)
-  - **Orange** = recent conflict
-  - **Gray** = historical conflict
-- Dashboard metrics:
-  - Active conflicts
-  - Total conflicts since 1900
-  - Days Without War
-  - Global Military Tension Index
-- Dropdown filter/settings menu with country multi-select, year slider, and AI refresh mode
-- Refresh Data button to reload metrics + map instantly
-- Conflict arrows/lines with hover tooltips and timeline play/pause animation
-- AI update pipeline with **OpenAI mode** + **offline mock mode**
+- Minimalist interactive world map (Leaflet)
+- Country search (manual) + "My country" geolocation helper
+- Days Without War for:
+  - all world (global mode)
+  - selected country
+- Active conflicts list (always visible in side panel)
+- Refresh Data button that updates both map and metrics
+- Timeline animation with play/pause (old conflicts first)
+- Optional AI refresh mode before data reload
 
 ## Project structure
 
@@ -131,3 +126,12 @@ If you see `ModuleNotFoundError: No module named 'backend'`, you are likely runn
 - **Timeline controls**: play/pause conflict sequence from oldest to newest.
 
 All metrics are fetched fresh from backend endpoints with cache-busting requests.
+
+
+## MVP usage flow
+
+1. Open app and choose a country in the search field (or click **Моя страна**).
+2. Move the year slider to filter map conflicts by timeline.
+3. Check **Дней без войны** and **Активные конфликты** in the side panel.
+4. Click **Refresh Data** to reload map + metrics (or run AI update first if selected).
+5. Use **Play/Pause** to watch chronological conflict animation.

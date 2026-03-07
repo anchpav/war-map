@@ -22,6 +22,16 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
 
 
+def _merge_conflicts_and_history(conflicts: list[dict], history: list[dict]) -> list[dict]:
+    """Merge records from history and current conflicts without duplicate IDs."""
+
+    merged_by_id: dict[str, dict] = {}
+    for record in [*history, *conflicts]:
+        if record.get("id"):
+            merged_by_id[record["id"]] = record
+    return list(merged_by_id.values())
+
+
 @app.route("/")
 def index():
     """Serve dashboard UI."""
@@ -31,7 +41,7 @@ def index():
 
 @app.route("/api/conflicts")
 def api_conflicts():
-    """Return conflict list for map rendering with optional filters."""
+    """Return current conflict list for map rendering with optional filters."""
 
     conflicts = load_conflicts()
     year = request.args.get("year", type=int)
@@ -40,6 +50,7 @@ def api_conflicts():
     filtered = filter_conflicts_by_country(conflicts, country)
 
     if year:
+
         def in_year(record: dict) -> bool:
             start_year = int(record["start"].split("-")[0])
             end_value = record.get("end")
@@ -51,11 +62,41 @@ def api_conflicts():
     return jsonify(filtered)
 
 
+@app.route("/api/active-conflicts")
+def api_active_conflicts():
+    """Return only active conflicts (end = null), optionally filtered by country."""
+
+    conflicts = load_conflicts()
+    country = request.args.get("country", type=str)
+    scoped = filter_conflicts_by_country(conflicts, country)
+    active = [record for record in scoped if record.get("end") is None]
+    return jsonify(active)
+
+
 @app.route("/api/history")
 def api_history():
     """Return historical conflicts since 1900."""
 
     return jsonify(load_history())
+
+
+@app.route("/api/country-days")
+def api_country_days():
+    """Return days-without-war for global or selected country.
+
+    If country is omitted, returns global value.
+    """
+
+    conflicts = load_conflicts()
+    history = load_history()
+
+    country = request.args.get("country", type=str)
+    all_records = _merge_conflicts_and_history(conflicts, history)
+
+    scoped = filter_conflicts_by_country(all_records, country)
+    days_without_war = calculate_days_without_war(scoped)
+
+    return jsonify({"country": country or "global", "days_without_war": days_without_war})
 
 
 @app.route("/api/metrics")
@@ -68,7 +109,7 @@ def api_metrics():
     country = request.args.get("country", type=str)
     scoped_conflicts = filter_conflicts_by_country(conflicts, country)
 
-    days_without_war = calculate_days_without_war(scoped_conflicts)
+    days_without_war = calculate_days_without_war(_merge_conflicts_and_history(conflicts, history), country=country)
     active_conflicts = sum(1 for c in scoped_conflicts if c.get("end") is None)
     total_conflicts_since_1900 = calculate_total_conflicts_since_1900(conflicts, history)
     tension_index = calculate_global_tension_index(scoped_conflicts, history)
