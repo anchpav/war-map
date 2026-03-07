@@ -14,9 +14,10 @@ A local-first full-stack project for visualizing armed conflicts since 1900.
   - Total conflicts since 1900
   - Days Without War
   - Global Military Tension Index
-- Settings panel (⚙️) with year slider, country multi-select, and AI mode selector
+- Dropdown filter/settings menu with country multi-select, year slider, and AI refresh mode
+- Refresh Data button to reload metrics + map instantly
+- Conflict arrows/lines with hover tooltips and timeline play/pause animation
 - AI update pipeline with **OpenAI mode** + **offline mock mode**
-- Timeline animation and basic conflict-zone prediction placeholder
 
 ## Project structure
 
@@ -121,3 +122,12 @@ If you see `ModuleNotFoundError: No module named 'backend'`, you are likely runn
 
 - `python global-war-tracker/scripts/run_server.py` from root, or
 - `cd global-war-tracker` then `python -m backend.server`.
+
+
+## Dashboard controls
+
+- **Filters & Settings dropdown**: countries (multi-select), year slider, AI refresh mode.
+- **Refresh Data**: reloads data and metrics; in AI mode it first calls `/api/ai-update`.
+- **Timeline controls**: play/pause conflict sequence from oldest to newest.
+
+All metrics are fetched fresh from backend endpoints with cache-busting requests.

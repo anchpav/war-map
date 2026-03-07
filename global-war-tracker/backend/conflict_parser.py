@@ -34,23 +34,14 @@ HISTORY_FILE = DATA_DIR / "history_1900.json"
 
 
 def load_json_file(path: Path) -> list[dict]:
-    """Load a JSON array from disk.
-
-    Why this function exists:
-    - Centralizing file loading keeps I/O behavior consistent.
-    - It makes error handling clearer for students reading the project.
-    """
+    """Load a JSON array from disk."""
 
     with path.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
 def save_json_file(path: Path, records: Iterable[dict]) -> None:
-    """Persist records to disk in readable JSON format.
-
-    Why indentation is used:
-    - Humans can inspect and edit the file easily during local-first development.
-    """
+    """Persist records to disk in readable JSON format."""
 
     with path.open("w", encoding="utf-8") as file:
         json.dump(list(records), file, indent=2, ensure_ascii=False)
@@ -69,38 +60,35 @@ def load_history() -> list[dict]:
 
 
 def parse_date(value: Optional[str]) -> Optional[date]:
-    """Convert date strings (YYYY-MM-DD) into ``date`` objects.
-
-    Returns ``None`` when the date is absent. This supports active conflicts
-    where ``end`` is intentionally null.
-    """
+    """Convert date strings (YYYY-MM-DD) into ``date`` objects."""
 
     if not value:
         return None
     return datetime.strptime(value, "%Y-%m-%d").date()
 
 
+def filter_conflicts_by_country(conflicts: list[dict], country: Optional[str] = None) -> list[dict]:
+    """Return country-filtered conflicts when a country is selected."""
+
+    if not country:
+        return conflicts
+    return [c for c in conflicts if c.get("country", "").lower() == country.lower()]
+
+
 def calculate_days_without_war(conflicts: list[dict], country: Optional[str] = None) -> int:
     """Calculate days since the last conflict ended.
 
-    Rules implemented exactly as requested:
+    Rules:
     1. If any conflict is active (``end`` is null), return 0.
     2. Otherwise find the newest end date.
     3. Return days from that date to today.
-
-    Optional country filtering is supported for country-specific analytics.
     """
 
-    # Apply optional country filter before any calculations.
-    if country:
-        filtered = [c for c in conflicts if c.get("country", "").lower() == country.lower()]
-    else:
-        filtered = conflicts
+    filtered = filter_conflicts_by_country(conflicts, country)
 
     if not filtered:
         return 0
 
-    # If at least one conflict is ongoing, the world/country is not currently at peace.
     if any(record.get("end") is None for record in filtered):
         return 0
 
@@ -114,16 +102,29 @@ def calculate_days_without_war(conflicts: list[dict], country: Optional[str] = N
     return (date.today() - most_recent_end).days
 
 
-def calculate_global_tension_index(conflicts: list[dict], history: list[dict]) -> float:
-    """Compute a simple, explainable Global Military Tension Index.
+def calculate_total_conflicts_since_1900(conflicts: list[dict], history: list[dict]) -> int:
+    """Calculate accurate total conflicts since 1900 using both datasets.
 
-    Formula (0-100 scale, clamped):
-    - Active conflicts have high weight (6 points each).
-    - Recent conflicts ended within 5 years add medium weight (3 points each).
-    - Historical memory adds small background pressure (history_count / 20).
-
-    This is intentionally simple so teams can swap in more advanced models later.
+    We merge `history_1900.json` and `conflicts.json` by unique `id` to avoid
+    double-counting records that exist in both files.
     """
+
+    by_id: dict[str, dict] = {}
+    for record in [*history, *conflicts]:
+        start_value = record.get("start", "")
+        try:
+            start_year = int(str(start_value).split("-")[0])
+        except (TypeError, ValueError):
+            continue
+
+        if start_year >= 1900 and record.get("id"):
+            by_id[record["id"]] = record
+
+    return len(by_id)
+
+
+def calculate_global_tension_index(conflicts: list[dict], history: list[dict]) -> float:
+    """Compute a simple, explainable Global Military Tension Index."""
 
     today = date.today()
     active = sum(1 for c in conflicts if c.get("end") is None)
@@ -136,11 +137,3 @@ def calculate_global_tension_index(conflicts: list[dict], history: list[dict]) -
 
     raw_score = (active * 6) + (recent * 3) + (len(history) / 20)
     return round(min(raw_score, 100), 2)
-
-
-def filter_conflicts_by_country(conflicts: list[dict], country: Optional[str] = None) -> list[dict]:
-    """Return country-filtered conflicts when a country is selected."""
-
-    if not country:
-        return conflicts
-    return [c for c in conflicts if c.get("country", "").lower() == country.lower()]

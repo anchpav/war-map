@@ -1,9 +1,4 @@
-"""Flask backend for GLOBAL WAR TRACKER.
-
-Responsibilities:
-- Serve static frontend files for local-first use.
-- Provide JSON APIs for conflicts, history, metrics, and AI updates.
-"""
+"""Flask backend for GLOBAL WAR TRACKER."""
 
 from __future__ import annotations
 
@@ -15,6 +10,7 @@ from .ai_updater import run_ai_update_pipeline
 from .conflict_parser import (
     calculate_days_without_war,
     calculate_global_tension_index,
+    calculate_total_conflicts_since_1900,
     filter_conflicts_by_country,
     load_conflicts,
     load_history,
@@ -35,20 +31,13 @@ def index():
 
 @app.route("/api/conflicts")
 def api_conflicts():
-    """Return conflict list for map rendering.
-
-    Supports optional query params:
-    - year: include conflicts active in that year
-    - country: include only one country
-    """
+    """Return conflict list for map rendering with optional filters."""
 
     conflicts = load_conflicts()
     year = request.args.get("year", type=int)
     country = request.args.get("country", type=str)
 
-    filtered = conflicts
-    if country:
-        filtered = [c for c in filtered if c.get("country", "").lower() == country.lower()]
+    filtered = filter_conflicts_by_country(conflicts, country)
 
     if year:
         def in_year(record: dict) -> bool:
@@ -71,7 +60,7 @@ def api_history():
 
 @app.route("/api/metrics")
 def api_metrics():
-    """Return key dashboard metrics."""
+    """Return key dashboard metrics with consistent scope."""
 
     conflicts = load_conflicts()
     history = load_history()
@@ -81,7 +70,7 @@ def api_metrics():
 
     days_without_war = calculate_days_without_war(scoped_conflicts)
     active_conflicts = sum(1 for c in scoped_conflicts if c.get("end") is None)
-    total_conflicts_since_1900 = len(history)
+    total_conflicts_since_1900 = calculate_total_conflicts_since_1900(conflicts, history)
     tension_index = calculate_global_tension_index(scoped_conflicts, history)
 
     return jsonify(
@@ -103,5 +92,4 @@ def api_ai_update():
 
 
 if __name__ == "__main__":
-    # Debug=True is convenient for local development and educational exploration.
     app.run(host="0.0.0.0", port=5000, debug=True)
