@@ -1,65 +1,82 @@
-# Global Conflict Tracker (GitHub Pages)
+# war-map
 
-Static web project that displays global conflict events on a Leaflet map with no server-side code.
+Lightweight geopolitical conflict dashboard MVP.
 
-## What it does
+This repository intentionally stays simple:
 
-- Loads conflict data with `fetch()` from an **online JSON URL** (`CONFLICTS_URL` in `script.js`).
-- Uses a **local fallback** (`conflicts.json`) for testing/demo reliability.
-- Renders:
-  - red conflict markers,
-  - yellow lines between `actor1` and `actor2`,
-  - heatmap overlay,
-  - popup with title, description, country.
-- Provides filters:
-  - year range filter,
-  - dynamic country multi-select (all countries discovered from JSON).
-- Shows **"Data unavailable"** if the online/local JSON cannot be loaded.
+- React + Vite + TypeScript frontend
+- Node + Express backend
+- D3 map rendering (GeoJSON + SVG + d3-zoom)
+- One Python script for RSS-based conflict updates
 
-## Files
+## Target structure
 
-- `index.html`
-- `style.css`
-- `script.js`
-- `conflicts.json` (sample, 5+ countries)
-
-## Configure your online source
-
-In `script.js`:
-
-```js
-const CONFLICTS_URL = "https://raw.githubusercontent.com/USERNAME/repo/main/conflicts.json";
-const CONFLICTS_FALLBACK_URL = "./conflicts.json";
-```
-
-Replace `CONFLICTS_URL` with your real raw JSON URL.
-
-Expected JSON item shape:
-
-```json
-{
-  "id": 1,
-  "lat": 50.4501,
-  "lon": 30.5234,
-  "title": "Conflict in Country A",
-  "description": "Ongoing clashes",
-  "country": "Country A",
-  "year": 2026,
-  "actor1": {"lat": 50.45, "lon": 30.52, "name": "Side A"},
-  "actor2": {"lat": 50.46, "lon": 30.53, "name": "Side B"}
-}
+```text
+war-map/
+├ client/
+│  ├ src/
+│  │  ├ components/
+│  │  │  ├ WorldMap.tsx
+│  │  │  ├ ConflictLines.tsx
+│  │  │  ├ CountrySearch.tsx
+│  │  │  └ MetricsPanel.tsx
+│  │  ├ api/
+│  │  │  └ api.ts
+│  │  └ types/
+│  │     └ index.ts
+│  └ public/data/
+│     ├ world.geo.json
+│     └ conflicts.json
+├ server/
+│  └ index.js
+├ scripts/
+│  └ updateConflicts.py
+├ run.ps1
+└ package.json
 ```
 
 ## Run locally
 
+### Backend
+
 ```bash
-python3 -m http.server 8080
+cd server
+npm install
+node index.js
 ```
 
-Open: `http://localhost:8080`
+### Frontend
 
-## GitHub Pages
+```bash
+cd client
+npm install
+npm run dev
+```
 
-1. Push repository to GitHub.
-2. Enable Pages for branch root.
-3. Open the generated Pages URL.
+## API
+
+- `GET /api/conflicts`
+  - Reads `client/public/data/conflicts.json`
+  - Returns JSON list
+
+## Conflict data model
+
+`client/public/data/conflicts.json` uses simple pairs (no coordinates):
+
+```json
+[
+  {
+    "country": "Russia",
+    "opponent": "Ukraine",
+    "active": true
+  }
+]
+```
+
+Coordinates are computed automatically from GeoJSON country centroids.
+
+## Notes
+
+- Country heat intensity is based on number of conflicts per country.
+- Conflict lines are curved SVG paths with CSS dash animation.
+- `scripts/updateConflicts.py` can fetch RSS headlines and append new conflict pairs.
