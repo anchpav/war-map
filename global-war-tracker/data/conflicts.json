@@ -38,5 +38,45 @@
     "start": "1990-08-02",
     "end": "1991-02-28",
     "description": "Coalition military operation after invasion of Kuwait."
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Missile attack reported near key border city as ceasefire fails"
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Government announces military strike after armed clash in northern region"
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Peace talks continue with no signs of invasion in neighboring state"
+  },
+  {
+    "id": "auto-unknown-2026-03-06",
+    "name": "Potential escalation in Unknown",
+    "country": "Unknown",
+    "lat": 0.0,
+    "lon": 0.0,
+    "start": "2026-03-06",
+    "end": null,
+    "description": "Aid convoys delayed after war escalates around contested province"
   }
 ]

@@ -43,7 +43,7 @@ global-war-tracker/
 
 ```bash
 cd global-war-tracker
-python -m pip install -r requirements.txt
+python -m pip install flask feedparser openai
 python -m backend.server
 ```
 
@@ -68,38 +68,15 @@ If `OPENAI_API_KEY` is missing, updater automatically uses local keyword detecti
 
 This guarantees local/offline operation.
 
-
-## GitHub update workflow
-
-Use this short flow whenever you need to update files in GitHub:
-
-```bash
-cd global-war-tracker
-python -m pip install -r requirements.txt
-git add .
-git commit -m "Update GLOBAL WAR TRACKER files"
-git push origin <your-branch>
-```
-
-Then open a Pull Request in GitHub and merge it into your main branch.
-
 ## API endpoints
 
 - `GET /api/conflicts`
 - `GET /api/history`
 - `GET /api/metrics`
-- `POST /api/ai-update` (kept for backend/scheduler usage; manual UI trigger removed)
+- `POST /api/ai-update`
 
 ## Extend later with real APIs
 
 - Add geocoding in `ai_updater.py` for precise coordinates.
 - Add dedicated source connectors in `data_sources.py`.
 - Replace placeholder prediction with ML model using historical data.
-
-
-## Testing
-
-```bash
-cd global-war-tracker
-python -m unittest discover -s tests -p "test_*.py"
-```
