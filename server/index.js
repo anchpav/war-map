@@ -1,70 +1,34 @@
-import express from 'express'
-import cors from 'cors'
-import fs from 'node:fs/promises'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { config } from './config.js'
-import { updateConflictData } from './services/aiService.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const conflictsPath = path.join(__dirname, '..', 'client', 'public', 'data', 'conflicts.json')
+import express from "express"
+import cors from "cors"
+import fs from "fs"
+import path from "path"
 
 const app = express()
+const PORT = 3000
+
 app.use(cors())
 app.use(express.json())
 
-async function readConflicts() {
-  const raw = await fs.readFile(conflictsPath, 'utf-8')
-  return JSON.parse(raw).conflicts
-}
+// path to conflicts data
+const dataPath = path.join(process.cwd(), "client/public/data/conflicts.json")
 
-function calculateDaysWithoutWar(conflicts, selectedCountry) {
-  const scoped = selectedCountry
-    ? conflicts.filter((conflict) =>
-        conflict.countries.some((country) => country.toLowerCase() === selectedCountry.toLowerCase())
-      )
-    : conflicts
-
-  if (scoped.length === 0) return 0
-  if (scoped.some((conflict) => conflict.active)) return 0
-
-  const ended = scoped.map((conflict) => conflict.end_date).filter(Boolean)
-  if (ended.length === 0) return 0
-
-  const mostRecent = ended.sort((a, b) => b.localeCompare(a))[0]
-  const diffMs = Date.now() - new Date(mostRecent).getTime()
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
-}
-
-app.get('/api/conflicts', async (_req, res) => {
-  const conflicts = await readConflicts()
-  res.json({ conflicts })
+// API endpoint for conflicts
+app.get("/api/conflicts", (req, res) => {
+  try {
+    const raw = fs.readFileSync(dataPath)
+    const data = JSON.parse(raw)
+    res.json(data)
+  } catch (err) {
+    console.error("Failed to read conflicts:", err)
+    res.status(500).json({ error: "Failed to load conflicts" })
+  }
 })
 
-app.get('/api/metrics', async (req, res) => {
-  const conflicts = await readConflicts()
-  const country = req.query.country || ''
-
-  const scoped = country
-    ? conflicts.filter((conflict) =>
-        conflict.countries.some((name) => name.toLowerCase() === String(country).toLowerCase())
-      )
-    : conflicts
-
-  res.json({
-    totalConflicts: scoped.length,
-    activeConflicts: scoped.filter((conflict) => conflict.active).length,
-    daysWithoutWarWorld: calculateDaysWithoutWar(conflicts),
-    daysWithoutWarSelected: calculateDaysWithoutWar(conflicts, String(country || ''))
-  })
+// simple health check
+app.get("/", (req, res) => {
+  res.send("War Map API running")
 })
 
-app.post('/api/update-conflicts', async (_req, res) => {
-  const result = await updateConflictData()
-  res.json({ status: 'ok', message: result.message })
-})
-
-app.listen(config.port, () => {
-  console.log(`Server running on http://localhost:${config.port}`)
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`)
 })
