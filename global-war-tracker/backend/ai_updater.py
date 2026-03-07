@@ -1,194 +1,199 @@
-"""AI-assisted conflict updater.
-
-This module supports two modes:
-1. Real AI mode (OpenAI API) if key + client are configured.
-2. Local mock mode using keyword detection when API is unavailable.
-
-The local mock mode guarantees the project can run without external services.
-"""
+"""AI conflict updater with DeepSeek -> Gemini -> mock fallback."""
 
 from __future__ import annotations
 
 from datetime import date
 import hashlib
-from typing import Any
 import json
 import os
 import re
+from typing import Any
+from urllib import error, request
 
+from .conflict_parser import CONFLICTS_FILE, save_json_file
+from .data_handler import load_conflicts
 from .data_sources import download_headlines, unique_headlines
-from .conflict_parser import load_conflicts, save_json_file, CONFLICTS_FILE
 
-# OpenAI is optional, because local mode is required.
-try:
-    from openai import OpenAI  # type: ignore
-except Exception:  # pragma: no cover - optional dependency
-    OpenAI = None
+KEYWORDS = ["war", "invasion", "military strike", "missile attack", "armed conflict", "clash"]
 
 
-KEYWORDS = [
-    "war",
-    "invasion",
-    "military strike",
-    "armed conflict",
-    "missile attack",
-    "clash",
-]
+def _guess_country(text: str) -> str:
+    """Best-effort country extraction for offline fallback mode."""
 
-
-def _guess_country_from_text(text: str) -> str:
-    """Very small heuristic extractor for mock mode.
-
-    It looks for words after prepositions like "in" or "near" and returns a
-    best-effort region string. This is intentionally simple and replaceable.
-    """
-
-    match = re.search(r"(?:in|near)\s+([A-Z][a-zA-Z\-]+)", text)
+    match = re.search(r"(?:in|near|between|over)\s+([A-Z][a-zA-Z\-]+)", text)
     return match.group(1) if match else "Unknown"
 
 
 def analyze_headlines_with_mock_ai(headlines: list[str]) -> list[dict[str, Any]]:
-    """Rule-based fallback when OpenAI API is unavailable.
+    """Offline rule-based detector used when both APIs are unavailable/fail."""
 
-    Why needed:
-    - Keeps update pipeline functional in fully offline environments.
-    - Helps beginner developers understand the pipeline before adding real AI.
-    """
+    records: list[dict[str, Any]] = []
+    for headline in headlines:
+        normalized = headline.lower()
+        if not any(keyword in normalized for keyword in KEYWORDS):
+            continue
 
-    results: list[dict[str, Any]] = []
-    for text in headlines:
-        lower = text.lower()
-        if any(keyword in lower for keyword in KEYWORDS):
-            country = _guess_country_from_text(text)
-            results.append(
-                {
-                    "is_conflict": True,
-                    "country": country,
-                    "location": country,
-                    "description": text,
-                    "possible_start_date": str(date.today()),
-                }
-            )
-    return results
-
-
-def analyze_headlines_with_openai(headlines: list[str]) -> list[dict[str, Any]]:
-    """Analyze headlines via OpenAI using requested prompt logic.
-
-    Important local-first behavior:
-    - If OpenAI request fails (network/auth/rate limit), gracefully fall back
-      to mock keyword mode instead of crashing the update pipeline.
-    """
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or OpenAI is None:
-        return analyze_headlines_with_mock_ai(headlines)
-
-    try:
-        client = OpenAI(api_key=api_key)
-        prompt = (
-            "Identify whether this headline describes a military conflict, war, invasion, "
-            "or armed clash. If yes, extract location, country, short description and "
-            "possible start date. Return JSON list with keys: "
-            "is_conflict,country,location,description,possible_start_date.\n\n"
-            + "\n".join(f"- {h}" for h in headlines)
+        country = _guess_country(headline)
+        records.append(
+            {
+                "is_conflict": True,
+                "country": country,
+                "location": country,
+                "description": headline,
+                "possible_start_date": str(date.today()),
+                "opponent": "Unknown",
+                "side_country": country,
+                "side_opponent": "Unknown",
+            }
         )
-
-        completion = client.responses.create(model="gpt-4.1-mini", input=prompt)
-        text_output = completion.output_text
-        return _parse_openai_json_output(text_output)
-    except Exception:
-        # Any OpenAI transport/auth/API error degrades to offline-safe mode.
-        return analyze_headlines_with_mock_ai(headlines)
+    return records
 
 
-def _parse_openai_json_output(text_output: str) -> list[dict[str, Any]]:
-    """Parse model output into JSON records with tolerant fallback.
+def _extract_json_list(raw: str) -> list[dict[str, Any]]:
+    """Parse list JSON from plain or fenced-model output."""
 
-    The model may return plain JSON or JSON wrapped in markdown fences.
-    This helper normalizes both formats before parsing.
-    """
-
-    cleaned = text_output.strip()
+    cleaned = raw.strip()
     if cleaned.startswith("```"):
-        lines = cleaned.splitlines()
-        if lines and lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        cleaned = "\n".join(lines).strip()
-        if cleaned.lower().startswith("json"):
-            cleaned = cleaned[4:].lstrip()
+        cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"```$", "", cleaned).strip()
 
     parsed = json.loads(cleaned)
-    if isinstance(parsed, list):
-        return parsed
-    return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+    data = json.dumps(payload).encode("utf-8")
+    req = request.Request(url, data=data, method="POST")
+    req.add_header("Content-Type", "application/json")
+    for key, value in headers.items():
+        req.add_header(key, value)
+
+    with request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _analyze_with_deepseek(headlines: list[str], api_key: str) -> list[dict[str, Any]]:
+    prompt = (
+        "Extract active military conflicts from headlines. "
+        "Return only JSON list with fields: "
+        "is_conflict,country,opponent,side_country,side_opponent,location,description,possible_start_date.\n"
+        + "\n".join(f"- {headline}" for headline in headlines)
+    )
+
+    response = _post_json(
+        "https://api.deepseek.com/v1/chat/completions",
+        {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "You are a conflict extraction assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.1,
+        },
+        {"Authorization": f"Bearer {api_key}"},
+    )
+    content = response["choices"][0]["message"]["content"]
+    return _extract_json_list(content)
+
+
+def _analyze_with_gemini(headlines: list[str], api_key: str) -> list[dict[str, Any]]:
+    prompt = (
+        "Extract active military conflicts from headlines. "
+        "Return only JSON list with fields: "
+        "is_conflict,country,opponent,side_country,side_opponent,location,description,possible_start_date.\n"
+        + "\n".join(f"- {headline}" for headline in headlines)
+    )
+
+    response = _post_json(
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
+        {"contents": [{"parts": [{"text": prompt}]}]},
+        {},
+    )
+    text = response["candidates"][0]["content"]["parts"][0]["text"]
+    return _extract_json_list(text)
+
+
+def analyze_headlines_with_ai(headlines: list[str]) -> tuple[list[dict[str, Any]], str]:
+    """Try DeepSeek first, then Gemini, then mock mode."""
+
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
+
+    if deepseek_key:
+        try:
+            return _analyze_with_deepseek(headlines, deepseek_key), "deepseek"
+        except Exception:
+            pass
+
+    if gemini_key:
+        try:
+            return _analyze_with_gemini(headlines, gemini_key), "gemini"
+        except Exception:
+            pass
+
+    return analyze_headlines_with_mock_ai(headlines), "mock"
 
 
 def convert_analysis_to_conflicts(analysis: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Convert AI analysis output into the project's conflict JSON schema."""
+    """Convert extracted analysis to project conflict schema."""
 
-    new_records: list[dict[str, Any]] = []
+    output: list[dict[str, Any]] = []
     for item in analysis:
         if not item.get("is_conflict"):
             continue
 
-        country = item.get("country") or "Unknown"
-        slug_country = country.lower().replace(" ", "-")
-        # Stable ID by signal content only (no current date) so repeated
-        # headlines across days deduplicate correctly.
-        digest_source = f"{country}|{item.get('description') or ''}".encode("utf-8")
-        digest = hashlib.md5(digest_source).hexdigest()[:12]
-        record = {
-            "id": f"auto-{slug_country}-{digest}",
-            "name": f"Potential escalation in {country}",
-            "country": country,
-            # Coordinates unknown in headline-only extraction; defaults are placeholders.
-            "lat": 0.0,
-            "lon": 0.0,
-            "start": item.get("possible_start_date") or str(date.today()),
-            "end": None,
-            "description": item.get("description") or "Auto-detected conflict signal",
-        }
-        new_records.append(record)
+        country = str(item.get("country") or "Unknown")
+        opponent = str(item.get("opponent") or "Unknown")
+        description = str(item.get("description") or "Conflict signal")
+        digest = hashlib.md5(f"{country}|{opponent}|{description}".encode("utf-8")).hexdigest()[:12]
 
-    return new_records
+        output.append(
+            {
+                "id": f"ai-{digest}",
+                "country": country,
+                "opponent": opponent,
+                "lat": float(item.get("lat") or 0.0),
+                "lon": float(item.get("lon") or 0.0),
+                "opponentLat": float(item.get("opponentLat") or 0.0),
+                "opponentLon": float(item.get("opponentLon") or 0.0),
+                "start": str(item.get("possible_start_date") or date.today()),
+                "end": None,
+                "description": description,
+                "side_country": str(item.get("side_country") or country),
+                "side_opponent": str(item.get("side_opponent") or opponent),
+            }
+        )
+
+    return output
 
 
 def merge_new_conflicts(existing: list[dict[str, Any]], incoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Append only truly new records by id to avoid duplicates."""
+    """Merge incoming conflicts by stable id."""
 
-    existing_ids = {record["id"] for record in existing}
+    known_ids = {record.get("id") for record in existing}
     merged = existing.copy()
+
     for record in incoming:
-        if record["id"] not in existing_ids:
+        if record.get("id") not in known_ids:
             merged.append(record)
-            existing_ids.add(record["id"])
+            known_ids.add(record.get("id"))
+
     return merged
 
 
 def run_ai_update_pipeline() -> dict[str, Any]:
-    """Run full update pipeline and persist changes.
-
-    Steps:
-    1. Download headlines.
-    2. Analyze with AI or mock mode.
-    3. Convert to conflict schema.
-    4. Merge into conflicts.json.
-    """
+    """Fetch headlines, detect conflicts, merge and persist JSON."""
 
     headlines = unique_headlines(download_headlines())
-    analysis = analyze_headlines_with_openai(headlines)
-    incoming_conflicts = convert_analysis_to_conflicts(analysis)
-
-    existing_conflicts = load_conflicts()
-    merged = merge_new_conflicts(existing_conflicts, incoming_conflicts)
-
+    analysis, provider = analyze_headlines_with_ai(headlines)
+    incoming = convert_analysis_to_conflicts(analysis)
+    existing = load_conflicts()
+    merged = merge_new_conflicts(existing, incoming)
     save_json_file(CONFLICTS_FILE, merged)
 
     return {
+        "provider": provider,
         "headlines_processed": len(headlines),
-        "detected_conflicts": len(incoming_conflicts),
+        "detected_conflicts": len(incoming),
         "total_conflicts": len(merged),
     }

@@ -1,17 +1,21 @@
-# Global War Tracker — Minimal Working Version
+# Global War Tracker (MVP)
 
-This is a minimal, runnable version of Global War Tracker with:
+Minimal full-stack app for tracking global conflicts with a Leaflet map and AI-assisted updates.
 
-- Leaflet world map (zoom + pan)
-- Country search/filter
-- Conflict markers + popups
-- Animated conflict lines/arrows (timeline play/pause)
+## Features
+
+- Leaflet world map centered at `[20, 0]` with zoom/pan.
+- Conflict markers + popups.
+- Animated conflict lines (timeline play/pause).
+- Country search/filter.
 - Metrics:
-  - Days Without War (global)
-  - Days Without War (selected country)
   - Active conflicts
   - Total conflicts
-- Local `conflicts.json` data source
+  - Days without war (world and selected country)
+- AI updater with fallback chain:
+  1. DeepSeek (`DEEPSEEK_API_KEY`)
+  2. Gemini (`GEMINI_API_KEY`)
+  3. Local keyword mock mode (offline)
 
 ## Project structure
 
@@ -19,72 +23,48 @@ This is a minimal, runnable version of Global War Tracker with:
 global-war-tracker/
   backend/
     server.py
+    ai_updater.py
     data_handler.py
+    data_sources.py
   data/
     conflicts.json
   frontend/
     index.html
-    script.js
     style.css
-    conflicts.json
+    script.js
   scripts/
     run_server.py
-  README.md
+    update_conflicts.py
 ```
 
-## Data format
-
-`data/conflicts.json` entries include required fields:
-
-```json
-{
-  "id": "unique-id",
-  "country": "Country A",
-  "lat": 0,
-  "lon": 0,
-  "start": "YYYY-MM-DD",
-  "end": null,
-  "description": "Conflict type"
-}
-```
-
-(For arrow visualization, optional fields `opponent`, `opponentLat`, `opponentLon` are used.)
-
-## Run locally (recommended)
-
-1. Install dependencies:
+## Run locally
 
 ```bash
-python -m pip install -r global-war-tracker/requirements.txt
+cd global-war-tracker
+python -m pip install -r requirements.txt
+python -m backend.server
 ```
 
-2. Start backend from repository root:
+Open: <http://localhost:5000>
+
+## Environment variables (optional)
 
 ```bash
-python global-war-tracker/scripts/run_server.py
+export DEEPSEEK_API_KEY=YOUR_DEEPSEEK_KEY
+export GEMINI_API_KEY=YOUR_GEMINI_KEY
 ```
 
-3. Open app:
-
-```text
-http://localhost:5000
-```
-
-## Frontend-only local fallback
-
-If backend is unavailable, frontend can still load local data from `frontend/conflicts.json`.
-
-```bash
-cd global-war-tracker/frontend
-python -m http.server 8080
-```
-
-Open:
-
-```text
-http://localhost:8080
-```
+If both keys are missing or requests fail, the updater automatically uses offline mock detection.
 
 ## API
 
-- `GET /api/conflicts` → all conflicts from local JSON
+- `GET /api/conflicts`
+- `GET /api/days_without_war?country=<country>`
+- `POST /api/update_conflicts`
+
+## Update conflicts from CLI
+
+```bash
+cd global-war-tracker
+python scripts/update_conflicts.py
+```

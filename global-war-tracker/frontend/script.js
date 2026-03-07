@@ -1,231 +1,226 @@
-/*
-  Minimal Global War Tracker frontend (plain JS + Leaflet)
-*/
+/* Global War Tracker: Leaflet map + markers + animated conflict lines */
 
-const API_URL = "/api/conflicts";
-const LOCAL_JSON_URL = "./conflicts.json";
-
-const map = L.map("map", { worldCopyJump: true }).setView([20, 0], 2);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
-  attribution: "© OpenStreetMap © CARTO",
-  maxZoom: 8,
+const map = L.map("map", { zoomControl: true }).setView([20, 0], 2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 6,
+  minZoom: 2,
+  attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
+
+const elements = {
+  countrySearch: document.getElementById("countrySearch"),
+  countryList: document.getElementById("countryList"),
+  clearCountry: document.getElementById("clearCountry"),
+  refreshData: document.getElementById("refreshData"),
+  updateAI: document.getElementById("updateAI"),
+  playTimeline: document.getElementById("playTimeline"),
+  pauseTimeline: document.getElementById("pauseTimeline"),
+  timelineStatus: document.getElementById("timelineStatus"),
+  activeCount: document.getElementById("activeCount"),
+  totalCount: document.getElementById("totalCount"),
+  daysWorld: document.getElementById("daysWorld"),
+  daysSelected: document.getElementById("daysSelected"),
+};
 
 const markerLayer = L.layerGroup().addTo(map);
 const lineLayer = L.layerGroup().addTo(map);
 
-const countrySearch = document.getElementById("countrySearch");
-const countryList = document.getElementById("countryList");
-const clearFilterBtn = document.getElementById("clearFilter");
-const refreshDataBtn = document.getElementById("refreshData");
-const playTimelineBtn = document.getElementById("playTimeline");
-const pauseTimelineBtn = document.getElementById("pauseTimeline");
-const timelineStatus = document.getElementById("timelineStatus");
-
-const daysGlobalEl = document.getElementById("daysGlobal");
-const daysCountryEl = document.getElementById("daysCountry");
-const activeCountEl = document.getElementById("activeCount");
-const totalCountEl = document.getElementById("totalCount");
-
 const state = {
-  conflicts: [],
+  allConflicts: [],
   selectedCountry: "",
-  animationTimer: null,
-  animationIndex: 0,
+  timer: null,
 };
 
-function parseDate(value) {
-  return value ? new Date(value) : null;
+function isActive(conflict) {
+  return conflict.end === null;
 }
 
-function statusColor(conflict) {
-  if (conflict.end === null) return "#ff4d4d"; // active
-  const years = (Date.now() - new Date(conflict.end).getTime()) / (1000 * 60 * 60 * 24 * 365);
-  return years <= 10 ? "#ff9f43" : "#8d98a5";
-}
-
-function buildCountryList(conflicts) {
-  const countries = [...new Set(conflicts.flatMap((c) => [c.country, c.opponent]).filter(Boolean))].sort();
-  countryList.innerHTML = "";
-  countries.forEach((country) => {
-    const option = document.createElement("option");
-    option.value = country;
-    countryList.appendChild(option);
-  });
+function lineColor(conflict) {
+  if (isActive(conflict)) return "#ff3b3b";
+  const endDate = conflict.end ? new Date(conflict.end) : null;
+  const years = endDate ? (Date.now() - endDate.getTime()) / (1000 * 60 * 60 * 24 * 365) : 0;
+  return years <= 10 ? "#ff9f43" : "#9aa2ad";
 }
 
 function filteredConflicts() {
-  if (!state.selectedCountry) return state.conflicts;
+  if (!state.selectedCountry) return state.allConflicts;
   const selected = state.selectedCountry.toLowerCase();
-  return state.conflicts.filter((c) =>
-    (c.country || "").toLowerCase() === selected || (c.opponent || "").toLowerCase() === selected
-  );
-}
-
-function activeConflicts(list) {
-  return list.filter((c) => c.end === null);
-}
-
-function calculateDaysWithoutWar(list) {
-  if (!list.length) return 0;
-  if (list.some((c) => c.end === null)) return 0;
-
-  const ends = list.map((c) => parseDate(c.end)).filter(Boolean);
-  if (!ends.length) return 0;
-  const latest = new Date(Math.max(...ends.map((d) => d.getTime())));
-  return Math.floor((Date.now() - latest.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function updateMetrics() {
-  const all = state.conflicts;
-  const selected = filteredConflicts();
-
-  daysGlobalEl.textContent = String(calculateDaysWithoutWar(all));
-  daysCountryEl.textContent = String(calculateDaysWithoutWar(selected));
-  activeCountEl.textContent = String(activeConflicts(selected).length);
-  totalCountEl.textContent = String(all.length);
-}
-
-function addConflictMarker(conflict) {
-  const marker = L.circleMarker([conflict.lat, conflict.lon], {
-    radius: 6,
-    color: statusColor(conflict),
-    fillColor: statusColor(conflict),
-    fillOpacity: 0.9,
-    weight: 1,
-  }).bindPopup(
-    `<strong>${conflict.country}</strong><br>` +
-      `Opponent: ${conflict.opponent || "Unknown"}<br>` +
-      `Start: ${conflict.start}<br>` +
-      `End: ${conflict.end || "Active"}<br>` +
-      `Details: ${conflict.description || "No description"}`
-  );
-
-  markerLayer.addLayer(marker);
-}
-
-function addConflictArrow(conflict) {
-  if (conflict.opponentLat == null || conflict.opponentLon == null) return;
-
-  const start = [conflict.lat, conflict.lon];
-  const end = [conflict.opponentLat, conflict.opponentLon];
-  const color = statusColor(conflict);
-
-  const line = L.polyline([start, end], { color, weight: 2.4, opacity: 0.8 }).bindTooltip(
-    `<strong>${conflict.country} ↔ ${conflict.opponent}</strong><br>` +
-      `Start: ${conflict.start}<br>` +
-      `End: ${conflict.end || "Active"}<br>` +
-      `Type: ${conflict.description || "Armed conflict"}`,
-    { sticky: true }
-  );
-
-  // Tiny arrowhead marker near the end point.
-  const arrow = L.circleMarker(end, {
-    radius: 3,
-    color,
-    fillColor: color,
-    fillOpacity: 1,
-    weight: 1,
+  return state.allConflicts.filter((row) => {
+    const a = String(row.country || "").toLowerCase();
+    const b = String(row.opponent || "").toLowerCase();
+    return a === selected || b === selected;
   });
-
-  lineLayer.addLayer(line);
-  lineLayer.addLayer(arrow);
 }
 
-function renderMapStatic() {
+async function fetchConflicts() {
+  const response = await fetch("/api/conflicts");
+  if (!response.ok) throw new Error("Cannot load conflicts");
+  return response.json();
+}
+
+async function fetchDays(country = "") {
+  const suffix = country ? `?country=${encodeURIComponent(country)}` : "";
+  const response = await fetch(`/api/days_without_war${suffix}`);
+  if (!response.ok) throw new Error("Cannot load metrics");
+  return response.json();
+}
+
+function drawMarkers(conflicts) {
   markerLayer.clearLayers();
-  lineLayer.clearLayers();
 
-  const list = filteredConflicts();
-  list.forEach((c) => {
-    addConflictMarker(c);
-    addConflictArrow(c);
+  conflicts.forEach((conflict) => {
+    const marker = L.circleMarker([conflict.lat, conflict.lon], {
+      radius: 6,
+      color: lineColor(conflict),
+      fillOpacity: 0.9,
+    });
+
+    marker.bindPopup(`
+      <strong>${conflict.country}</strong><br>
+      Opponent: ${conflict.opponent || "Unknown"}<br>
+      Start: ${conflict.start}<br>
+      End: ${conflict.end || "Active"}<br>
+      ${conflict.description || "Conflict"}
+    `);
+
+    markerLayer.addLayer(marker);
   });
+}
 
-  if (list.length) {
-    const bounds = L.latLngBounds(list.map((c) => [c.lat, c.lon]));
-    map.fitBounds(bounds, { padding: [20, 20], maxZoom: 4.8 });
-  } else {
-    map.setView([20, 0], 2);
-  }
+function buildCurve(from, to) {
+  const midLat = (from[0] + to[0]) / 2 + 8;
+  const midLon = (from[1] + to[1]) / 2;
+  return [from, [midLat, midLon], to];
+}
 
-  timelineStatus.textContent = `Showing conflicts: ${list.length}`;
+function addConflictLine(conflict) {
+  const from = [Number(conflict.lat), Number(conflict.lon)];
+  const to = [Number(conflict.opponentLat ?? conflict.lat), Number(conflict.opponentLon ?? conflict.lon + 3)];
+  const polyline = L.polyline(buildCurve(from, to), {
+    color: lineColor(conflict),
+    weight: 2,
+    opacity: 0.85,
+    dashArray: "8 8",
+    lineCap: "round",
+  }).addTo(lineLayer);
+
+  polyline.bindTooltip(
+    `${conflict.country} vs ${conflict.opponent || "Unknown"}<br>${conflict.start} → ${conflict.end || "Active"}<br>${conflict.description || "Conflict"}`
+  );
 }
 
 function stopTimeline() {
-  if (state.animationTimer) {
-    clearInterval(state.animationTimer);
-    state.animationTimer = null;
+  if (state.timer) {
+    clearInterval(state.timer);
+    state.timer = null;
   }
 }
 
 function playTimeline() {
   stopTimeline();
-  markerLayer.clearLayers();
+  const list = filteredConflicts().slice().sort((a, b) => String(a.start).localeCompare(String(b.start)));
   lineLayer.clearLayers();
 
-  const timeline = filteredConflicts().slice().sort((a, b) => (a.start || "").localeCompare(b.start || ""));
-  if (!timeline.length) {
-    timelineStatus.textContent = "Timeline: no conflicts";
+  if (!list.length) {
+    elements.timelineStatus.textContent = "No conflicts for timeline";
     return;
   }
 
-  state.animationIndex = 0;
-  timelineStatus.textContent = `Timeline: 0/${timeline.length}`;
-
-  state.animationTimer = setInterval(() => {
-    if (state.animationIndex >= timeline.length) {
+  let index = 0;
+  elements.timelineStatus.textContent = "Timeline running";
+  state.timer = setInterval(() => {
+    if (index >= list.length) {
       stopTimeline();
-      timelineStatus.textContent = `Timeline complete (${timeline.length}/${timeline.length})`;
+      elements.timelineStatus.textContent = "Timeline finished";
       return;
     }
 
-    const item = timeline[state.animationIndex];
-    addConflictMarker(item);
-    addConflictArrow(item);
-
-    state.animationIndex += 1;
-    timelineStatus.textContent = `Timeline: ${state.animationIndex}/${timeline.length}`;
-  }, 320);
+    addConflictLine(list[index]);
+    index += 1;
+  }, 450);
 }
 
-async function loadConflicts() {
-  try {
-    const response = await fetch(`${API_URL}?_ts=${Date.now()}`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    state.conflicts = await response.json();
-  } catch {
-    const fallback = await fetch(`${LOCAL_JSON_URL}?_ts=${Date.now()}`, { cache: "no-store" });
-    state.conflicts = await fallback.json();
-  }
-
-  buildCountryList(state.conflicts);
-  updateMetrics();
-  renderMapStatic();
+function drawAllLines() {
+  lineLayer.clearLayers();
+  filteredConflicts().forEach(addConflictLine);
 }
 
-countrySearch.addEventListener("change", () => {
-  state.selectedCountry = countrySearch.value.trim();
-  updateMetrics();
-  renderMapStatic();
+function populateCountryList(conflicts) {
+  const countries = new Set();
+  conflicts.forEach((row) => {
+    if (row.country) countries.add(row.country);
+    if (row.opponent) countries.add(row.opponent);
+  });
+
+  elements.countryList.innerHTML = "";
+  [...countries].sort().forEach((country) => {
+    const option = document.createElement("option");
+    option.value = country;
+    elements.countryList.appendChild(option);
+  });
+}
+
+async function updateMetrics() {
+  const [globalMetrics, localMetrics] = await Promise.all([
+    fetchDays(),
+    fetchDays(state.selectedCountry),
+  ]);
+
+  const current = filteredConflicts();
+  elements.activeCount.textContent = String(current.filter(isActive).length);
+  elements.totalCount.textContent = String(current.length);
+  elements.daysWorld.textContent = String(globalMetrics.days_without_war);
+  elements.daysSelected.textContent = String(localMetrics.days_without_war);
+}
+
+async function redraw() {
+  const current = filteredConflicts();
+  drawMarkers(current);
+  drawAllLines();
+  await updateMetrics();
+}
+
+async function loadData() {
+  state.allConflicts = await fetchConflicts();
+  populateCountryList(state.allConflicts);
+  await redraw();
+}
+
+elements.countrySearch.addEventListener("change", async () => {
+  state.selectedCountry = elements.countrySearch.value.trim();
+  stopTimeline();
+  elements.timelineStatus.textContent = state.selectedCountry ? `Filtered: ${state.selectedCountry}` : "Ready";
+  await redraw();
 });
 
-clearFilterBtn.addEventListener("click", () => {
+elements.clearCountry.addEventListener("click", async () => {
   state.selectedCountry = "";
-  countrySearch.value = "";
-  updateMetrics();
-  renderMapStatic();
-});
-
-refreshDataBtn.addEventListener("click", async () => {
+  elements.countrySearch.value = "";
   stopTimeline();
-  await loadConflicts();
+  elements.timelineStatus.textContent = "Ready";
+  await redraw();
 });
 
-playTimelineBtn.addEventListener("click", playTimeline);
-pauseTimelineBtn.addEventListener("click", () => {
+elements.refreshData.addEventListener("click", async () => {
   stopTimeline();
-  timelineStatus.textContent = `Timeline paused (${state.animationIndex})`;
+  await loadData();
+  elements.timelineStatus.textContent = "Data refreshed";
 });
 
-loadConflicts();
+elements.updateAI.addEventListener("click", async () => {
+  elements.timelineStatus.textContent = "Running AI update...";
+  const response = await fetch("/api/update_conflicts", { method: "POST" });
+  const result = await response.json();
+  await loadData();
+  elements.timelineStatus.textContent = `AI update (${result.provider}) added ${result.detected_conflicts} conflicts`;
+});
+
+elements.playTimeline.addEventListener("click", playTimeline);
+elements.pauseTimeline.addEventListener("click", () => {
+  stopTimeline();
+  elements.timelineStatus.textContent = "Timeline paused";
+});
+
+loadData().catch((error) => {
+  elements.timelineStatus.textContent = `Error: ${error.message}`;
+});
