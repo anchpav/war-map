@@ -145,7 +145,9 @@ def convert_analysis_to_conflicts(analysis: list[dict[str, Any]]) -> list[dict[s
         country = str(item.get("country") or "Unknown")
         opponent = str(item.get("opponent") or "Unknown")
         description = str(item.get("description") or "Conflict signal")
-        digest = hashlib.md5(f"{country}|{opponent}|{description}".encode("utf-8")).hexdigest()[:12]
+        # Use stable fields only so similar conflicts from different headlines dedupe correctly.
+        stable_start = str(item.get("possible_start_date") or date.today())
+        digest = hashlib.md5(f"{country}|{opponent}|{stable_start}".encode("utf-8")).hexdigest()[:12]
 
         output.append(
             {

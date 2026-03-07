@@ -1,7 +1,13 @@
 """Unit tests for AI updater provider fallback and merge behavior."""
 
+from pathlib import Path
+import sys
 from unittest.mock import patch
 import unittest
+
+# Make backend package importable during root-level unittest discovery.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.ai_updater import analyze_headlines_with_ai, convert_analysis_to_conflicts, merge_new_conflicts
 
