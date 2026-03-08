@@ -1,7 +1,9 @@
 Write-Host "Syncing repository with origin/main..."
+
 git fetch origin
+
 if ($LASTEXITCODE -eq 0) {
-  git reset --hard origin/main
+  git pull origin main
 }
 
 Write-Host "Starting backend in new PowerShell window..."
