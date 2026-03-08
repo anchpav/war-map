@@ -1,65 +1,73 @@
-# Global Conflict Tracker (GitHub Pages)
+# Global War Tracker
 
-Static web project that displays global conflict events on a Leaflet map with no server-side code.
+Minimal React + Vite + D3 conflict map with a lightweight Express API.
 
-## What it does
+## What was cleaned up
 
-- Loads conflict data with `fetch()` from an **online JSON URL** (`CONFLICTS_URL` in `script.js`).
-- Uses a **local fallback** (`conflicts.json`) for testing/demo reliability.
-- Renders:
-  - red conflict markers,
-  - yellow lines between `actor1` and `actor2`,
-  - heatmap overlay,
-  - popup with title, description, country.
-- Provides filters:
-  - year range filter,
-  - dynamic country multi-select (all countries discovered from JSON).
-- Shows **"Data unavailable"** if the online/local JSON cannot be loaded.
+- Removed legacy static frontend entry files (single entrypoint only).
+- Frontend now boots only from `client/src/main.tsx` via `client/index.html`.
+- Moved data loading to small service modules:
+  - `client/src/services/conflictService.ts`
+  - `client/src/services/geoService.ts`
+- Optimized map rendering to use only `d3-geo`, `d3-selection`, `d3-zoom`.
+- Kept project architecture simple: one frontend, one backend, local JSON data.
 
-## Files
+## Project structure
 
-- `index.html`
-- `style.css`
-- `script.js`
-- `conflicts.json` (sample, 5+ countries)
-
-## Configure your online source
-
-In `script.js`:
-
-```js
-const CONFLICTS_URL = "https://raw.githubusercontent.com/USERNAME/repo/main/conflicts.json";
-const CONFLICTS_FALLBACK_URL = "./conflicts.json";
-```
-
-Replace `CONFLICTS_URL` with your real raw JSON URL.
-
-Expected JSON item shape:
-
-```json
-{
-  "id": 1,
-  "lat": 50.4501,
-  "lon": 30.5234,
-  "title": "Conflict in Country A",
-  "description": "Ongoing clashes",
-  "country": "Country A",
-  "year": 2026,
-  "actor1": {"lat": 50.45, "lon": 30.52, "name": "Side A"},
-  "actor2": {"lat": 50.46, "lon": 30.53, "name": "Side B"}
-}
+```text
+war-map/
+├ client/
+│  ├ index.html
+│  ├ package.json
+│  ├ vite.config.ts
+│  ├ tsconfig.json
+│  ├ public/data/
+│  │  ├ conflicts.json
+│  │  └ world.geo.json
+│  └ src/
+│     ├ main.tsx
+│     ├ App.tsx
+│     ├ styles.css
+│     ├ types/index.ts
+│     ├ services/
+│     │  ├ conflictService.ts
+│     │  └ geoService.ts
+│     └ components/
+│        ├ WorldMap.tsx
+│        ├ ConflictLines.tsx
+│        ├ CountrySearch.tsx
+│        └ MetricsPanel.tsx
+├ server/
+│  ├ index.js
+│  └ package.json
+├ scripts/
+│  └ updateConflicts.py
+├ run.ps1
+└ package.json
 ```
 
 ## Run locally
 
+### Backend
+
 ```bash
-python3 -m http.server 8080
+cd server
+node index.js
 ```
 
-Open: `http://localhost:8080`
+### Frontend
 
-## GitHub Pages
+```bash
+cd client
+npm install
+npm run dev
+```
 
-1. Push repository to GitHub.
-2. Enable Pages for branch root.
-3. Open the generated Pages URL.
+UI: `http://localhost:5173`
+
+## Notes
+
+- `WorldMap.tsx` memoizes heavy projection/path work for stable performance.
+- Country labels are rendered only when zoom level is above `2`.
+- Conflict lines are curved SVG paths with CSS dash animation (lightweight strategy-map style).
+- Data is loaded once on startup (`/api/conflicts` with fallback to `/data/conflicts.json`).
