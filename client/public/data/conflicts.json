@@ -1,0 +1,7 @@
+[
+  {"country": "Russia", "opponent": "Ukraine", "start": "2022-02-24", "active": true},
+  {"country": "Israel", "opponent": "Palestine", "start": "2023-10-07", "active": true},
+  {"country": "Syria", "opponent": "Turkey", "start": "2011-03-15", "active": true},
+  {"country": "Armenia", "opponent": "Azerbaijan", "start": "2020-09-27", "active": false},
+  {"country": "Iraq", "opponent": "United States", "start": "1990-08-02", "active": false}
+]
