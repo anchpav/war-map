@@ -1,65 +1,112 @@
-# Global Conflict Tracker (GitHub Pages)
+# Global War Tracker
 
-Static web project that displays global conflict events on a Leaflet map with no server-side code.
+A lightweight geopolitical dashboard built with **React + TypeScript + D3** and a minimal **Express** API.
 
-## What it does
+The project focuses on clarity:
+- one frontend app,
+- one backend endpoint,
+- one local data model,
+- one optional updater script.
 
-- Loads conflict data with `fetch()` from an **online JSON URL** (`CONFLICTS_URL` in `script.js`).
-- Uses a **local fallback** (`conflicts.json`) for testing/demo reliability.
-- Renders:
-  - red conflict markers,
-  - yellow lines between `actor1` and `actor2`,
-  - heatmap overlay,
-  - popup with title, description, country.
-- Provides filters:
-  - year range filter,
-  - dynamic country multi-select (all countries discovered from JSON).
-- Shows **"Data unavailable"** if the online/local JSON cannot be loaded.
+## Screenshot
 
-## Files
+_Add your local screenshot here after running the app (for example `docs/screenshot.png`)._
 
-- `index.html`
-- `style.css`
-- `script.js`
-- `conflicts.json` (sample, 5+ countries)
+## Features
 
-## Configure your online source
+- Responsive D3 world map using `geoMercator().fitSize(...)`
+- Zoom + pan (`d3-zoom`, 1x to 8x)
+- Country hover tooltip and country selection
+- Search-driven country focus (zoom to country bounds)
+- Conflict heat intensity by country involvement
+- Curved, animated, glowing conflict lines
+- Timeline slider (1900 → current year)
+- Recent conflicts panel
+- Legend panel
+- Country details panel
+- Keyboard shortcuts:
+  - `F`: focus search
+  - `ESC`: close selected country panel
+  - `R`: reset map zoom
 
-In `script.js`:
+## Project structure
 
-```js
-const CONFLICTS_URL = "https://raw.githubusercontent.com/USERNAME/repo/main/conflicts.json";
-const CONFLICTS_FALLBACK_URL = "./conflicts.json";
+```text
+war-map/
+├ client/
+│  ├ src/
+│  │  ├ components/
+│  │  │  ├ WorldMap.tsx
+│  │  │  ├ ConflictLines.tsx
+│  │  │  ├ CountrySearch.tsx
+│  │  │  └ MetricsPanel.tsx
+│  │  ├ api/
+│  │  │  └ api.ts
+│  │  └ types/
+│  │     └ index.ts
+│  └ public/data/
+│     ├ world.geo.json
+│     └ conflicts.json
+├ server/
+│  └ index.js
+├ scripts/
+│  └ updateConflicts.py
+├ run.ps1
+└ package.json
 ```
 
-Replace `CONFLICTS_URL` with your real raw JSON URL.
+## Data model
 
-Expected JSON item shape:
+`client/public/data/conflicts.json`
 
 ```json
-{
-  "id": 1,
-  "lat": 50.4501,
-  "lon": 30.5234,
-  "title": "Conflict in Country A",
-  "description": "Ongoing clashes",
-  "country": "Country A",
-  "year": 2026,
-  "actor1": {"lat": 50.45, "lon": 30.52, "name": "Side A"},
-  "actor2": {"lat": 50.46, "lon": 30.53, "name": "Side B"}
-}
+[
+  {
+    "country": "Russia",
+    "opponent": "Ukraine",
+    "start": "2022-02-24",
+    "active": true
+  }
+]
 ```
+
+Coordinates are not stored in conflicts data.
+Map line positions are computed dynamically using GeoJSON country centroids (`d3.geoCentroid`).
 
 ## Run locally
 
+### Backend
+
 ```bash
-python3 -m http.server 8080
+cd server
+npm install
+node index.js
 ```
 
-Open: `http://localhost:8080`
+Backend API:
+- `GET /api/conflicts` → reads `client/public/data/conflicts.json`
 
-## GitHub Pages
+### Frontend
 
-1. Push repository to GitHub.
-2. Enable Pages for branch root.
-3. Open the generated Pages URL.
+```bash
+cd client
+npm install
+npm run dev
+```
+
+### Optional updater script
+
+```bash
+python scripts/updateConflicts.py
+```
+
+The script reads RSS feeds, extracts likely conflict country pairs, and appends new records.
+
+## Technology stack
+
+- React
+- TypeScript
+- D3 (`d3-geo`, `d3-zoom`, `d3-shape`)
+- CSS animations
+- Node + Express
+- Python (`feedparser`, `requests`) for optional data updates
