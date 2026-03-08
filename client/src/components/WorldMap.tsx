@@ -1,26 +1,23 @@
-import { geoCentroid, geoMercator, geoPath, type GeoPermissibleObjects } from 'd3-geo'
+import { geoMercator, geoPath, type GeoProjection, type GeoPermissibleObjects } from 'd3-geo'
+import { zoom, zoomIdentity } from 'd3-zoom'
 import { select } from 'd3-selection'
-import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Conflict, CountryFeatureCollection } from '../types'
-import { getCountryName } from '../services/geoService'
+import { useMemo, useRef, useState, useEffect } from 'react'
+import type { Conflict } from '../types'
 import { ConflictLines } from './ConflictLines'
 
 type WorldMapProps = {
-  geoData: CountryFeatureCollection
+  geoData: any
   conflicts: Conflict[]
   selectedCountry: string
   onSelectCountry: (country: string) => void
   onHoverText: (text: string) => void
-  resetSignal: number
 }
 
 type Size = { width: number; height: number }
-type Tooltip = { x: number; y: number; text: string; visible: boolean }
 
 function useContainerSize() {
   const ref = useRef<HTMLDivElement | null>(null)
-  const [size, setSize] = useState<Size>({ width: 1100, height: 620 })
+  const [size, setSize] = useState<Size>({ width: 1000, height: 560 })
 
   useEffect(() => {
     if (!ref.current) return
@@ -30,7 +27,7 @@ function useContainerSize() {
       if (!entry) return
 
       setSize({
-        width: Math.max(320, entry.contentRect.width),
+        width: entry.contentRect.width,
         height: Math.max(420, entry.contentRect.width * 0.56)
       })
     })
@@ -42,160 +39,147 @@ function useContainerSize() {
   return { ref, size }
 }
 
-function buildHeatMap(conflicts: Conflict[]) {
-  const heat = new Map<string, number>()
-  conflicts.forEach((conflict) => {
-    heat.set(conflict.country, (heat.get(conflict.country) ?? 0) + 1)
-    heat.set(conflict.opponent, (heat.get(conflict.opponent) ?? 0) + 1)
-  })
-  return heat
-}
+export function WorldMap({
+  geoData,
+  conflicts,
+  selectedCountry,
+  onSelectCountry,
+  onHoverText
+}: WorldMapProps) {
 
-export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry, onHoverText, resetSignal }: WorldMapProps) {
   const { ref, size } = useContainerSize()
   const svgRef = useRef<SVGSVGElement | null>(null)
-  const zoomLayerRef = useRef<SVGGElement | null>(null)
-  const countriesLayerRef = useRef<SVGGElement | null>(null)
-  const labelsLayerRef = useRef<SVGGElement | null>(null)
-  const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null)
 
-  const [zoomLevel, setZoomLevel] = useState(1)
-  const [tooltip, setTooltip] = useState<Tooltip>({ x: 0, y: 0, text: '', visible: false })
+  const projection: GeoProjection = useMemo(() => {
+    return geoMercator().fitSize(
+      [size.width, size.height],
+      geoData as GeoPermissibleObjects
+    )
+  }, [geoData, size])
 
-  // Memoize heavy map calculations to reduce unnecessary re-renders.
-  const projection = useMemo(
-    () => geoMercator().fitSize([size.width, size.height], geoData as GeoPermissibleObjects),
-    [geoData, size.width, size.height]
-  )
   const pathBuilder = useMemo(() => geoPath(projection), [projection])
-  const heatMap = useMemo(() => buildHeatMap(conflicts), [conflicts])
-
-  const centroids = useMemo(() => {
-    const map = new Map<string, [number, number]>()
-
-    geoData.features.forEach((feature) => {
-      const name = getCountryName(feature)
-      const [lon, lat] = geoCentroid(feature as GeoPermissibleObjects)
-      const point = projection([lon, lat])
-      if (point) map.set(name, [point[0], point[1]])
-    })
-
-    return map
-  }, [geoData, projection])
 
   useEffect(() => {
-    if (!svgRef.current || !zoomLayerRef.current) return
+    if (!svgRef.current) return
 
     const svg = select(svgRef.current)
-    const zoomLayer = select(zoomLayerRef.current)
 
-    const behavior = zoom<SVGSVGElement, unknown>()
+    const zoomBehavior = zoom<SVGSVGElement, unknown>()
       .scaleExtent([1, 8])
-      .on('zoom', (event) => {
-        zoomLayer.attr('transform', event.transform)
-        setZoomLevel(event.transform.k)
+      .on("zoom", (event) => {
+        svg.select("g").attr("transform", event.transform)
       })
 
-    zoomRef.current = behavior
-    svg.call(behavior)
+    svg.call(zoomBehavior)
+
   }, [])
 
-  useEffect(() => {
-    if (!countriesLayerRef.current || !labelsLayerRef.current) return
+  function project(coords: [number, number]): [number, number] | null {
+    const point = projection(coords)
+    return point ? [point[0], point[1]] : null
+  }
 
-    const countriesLayer = select(countriesLayerRef.current)
-    const labelsLayer = select(labelsLayerRef.current)
+  function zoomToCountry(feature: any) {
+    if (!svgRef.current) return
 
-    countriesLayer
-      .selectAll<SVGPathElement, any>('path.country-shape')
-      .data(geoData.features)
-      .join('path')
-      .attr('class', (feature: any) => {
-        const name = getCountryName(feature)
-        const isConflict = conflicts.some((c) => c.country === name || c.opponent === name)
-        const isSelected = selectedCountry === name
-        const count = heatMap.get(name) ?? 0
-        const heatClass = count >= 3 ? 'heat-3' : count >= 1 ? 'heat-1' : ''
-        return `country country-shape ${isConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''} ${heatClass}`.trim()
-      })
-      .attr('d', (feature: any) => pathBuilder(feature as GeoPermissibleObjects) ?? '')
-      .on('mouseenter', (event: MouseEvent, feature: any) => {
-        const name = getCountryName(feature)
-        onHoverText(name)
-        setTooltip({ x: event.offsetX + 10, y: event.offsetY + 10, text: name, visible: true })
-      })
-      .on('mousemove', (event: MouseEvent) => {
-        setTooltip((prev) => ({ ...prev, x: event.offsetX + 10, y: event.offsetY + 10 }))
-      })
-      .on('mouseleave', () => {
-        onHoverText('')
-        setTooltip((prev) => ({ ...prev, visible: false }))
-      })
-      .on('click', (_event: MouseEvent, feature: any) => {
-        onSelectCountry(getCountryName(feature))
-      })
+    const [[x0, y0], [x1, y1]] = pathBuilder.bounds(feature)
 
-    labelsLayer
-      .selectAll<SVGTextElement, any>('text.country-label')
-      .data(geoData.features)
-      .join('text')
-      .attr('class', 'country-label')
-      .text((feature: any) => getCountryName(feature))
-      .attr('x', (feature: any) => {
-        const [lon, lat] = geoCentroid(feature as GeoPermissibleObjects)
-        const point = projection([lon, lat])
-        return point ? point[0] : -9999
-      })
-      .attr('y', (feature: any) => {
-        const [lon, lat] = geoCentroid(feature as GeoPermissibleObjects)
-        const point = projection([lon, lat])
-        return point ? point[1] : -9999
-      })
-      .style('display', zoomLevel > 2 ? 'block' : 'none')
-      .style('pointer-events', 'none')
-  }, [geoData, conflicts, selectedCountry, pathBuilder, projection, heatMap, zoomLevel, onHoverText, onSelectCountry])
+    const dx = x1 - x0
+    const dy = y1 - y0
+    const x = (x0 + x1) / 2
+    const y = (y0 + y1) / 2
 
-  // Clicked/searched country: zoom to bounds and center it in view.
-  useEffect(() => {
-    if (!selectedCountry || !svgRef.current || !zoomRef.current) return
+    const scale = Math.max(
+      1,
+      Math.min(8, 0.9 / Math.max(dx / size.width, dy / size.height))
+    )
 
-    const target = geoData.features.find((feature) => getCountryName(feature) === selectedCountry)
-    if (!target) return
+    const translate = [
+      size.width / 2 - scale * x,
+      size.height / 2 - scale * y
+    ]
 
-    const bounds = pathBuilder.bounds(target as GeoPermissibleObjects)
-    const dx = bounds[1][0] - bounds[0][0]
-    const dy = bounds[1][1] - bounds[0][1]
-    const x = (bounds[0][0] + bounds[1][0]) / 2
-    const y = (bounds[0][1] + bounds[1][1]) / 2
+    const svg = select(svgRef.current)
 
-    const scale = Math.max(1, Math.min(8, 0.9 / Math.max(dx / size.width, dy / size.height)))
-    const tx = size.width / 2 - scale * x
-    const ty = size.height / 2 - scale * y
-
-    select(svgRef.current).call(zoomRef.current.transform as any, zoomIdentity.translate(tx, ty).scale(scale))
-  }, [selectedCountry, geoData, pathBuilder, size.width, size.height])
-
-  useEffect(() => {
-    if (!svgRef.current || !zoomRef.current) return
-    select(svgRef.current).call(zoomRef.current.transform as any, zoomIdentity)
-  }, [resetSignal])
+    svg
+      .transition()
+      .duration(750)
+      .call(
+        zoom().transform,
+        zoomIdentity
+          .translate(translate[0], translate[1])
+          .scale(scale)
+      )
+  }
 
   return (
-    <section className="panel map-panel" ref={ref}>
-      <svg ref={svgRef} className="world-svg" width={size.width} height={size.height} role="img" aria-label="World conflict map">
-        <g ref={zoomLayerRef}>
-          <rect className="ocean" width={size.width} height={size.height} />
-          <g ref={countriesLayerRef} />
-          <ConflictLines conflicts={conflicts} centroids={centroids} onHoverText={onHoverText} />
-          <g ref={labelsLayerRef} />
+    <div ref={ref} className="panel map-panel">
+
+      <svg
+        ref={svgRef}
+        width={size.width}
+        height={size.height}
+        className="world-svg"
+      >
+
+        {/* Ocean background */}
+        <rect
+          width={size.width}
+          height={size.height}
+          fill="#0b1f33"
+        />
+
+        <g>
+
+          {geoData.features.map((feature: any) => {
+
+            const countryName =
+              feature.properties?.name ||
+              feature.properties?.ADMIN ||
+              feature.properties?.NAME ||
+              "Unknown"
+
+            const centroid = pathBuilder.centroid(feature)
+
+            return (
+              <g key={countryName}>
+
+                <path
+                  d={pathBuilder(feature) ?? undefined}
+                  className={`country ${selectedCountry === countryName ? "selected" : ""}`}
+                  onMouseEnter={() => onHoverText(countryName)}
+                  onMouseLeave={() => onHoverText("")}
+                  onClick={() => {
+                    onSelectCountry(countryName)
+                    zoomToCountry(feature)
+                  }}
+                />
+
+                {/* Country label */}
+                {centroid && (
+                  <text
+                    x={centroid[0]}
+                    y={centroid[1]}
+                    className="country-label"
+                  >
+                    {countryName}
+                  </text>
+                )}
+
+              </g>
+            )
+          })}
+
+          <ConflictLines
+            conflicts={conflicts}
+            project={project}
+            onHoverText={onHoverText}
+          />
+
         </g>
+
       </svg>
 
-      {tooltip.visible && (
-        <div className="map-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
-          {tooltip.text}
-        </div>
-      )}
-    </section>
+    </div>
   )
 }
