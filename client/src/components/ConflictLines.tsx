@@ -3,39 +3,37 @@ import type { Conflict } from '../types'
 
 type ConflictLinesProps = {
   conflicts: Conflict[]
-  centroids: Map<string, [number, number]>
+  project: (coords: [number, number]) => [number, number] | null
   onHoverText: (text: string) => void
 }
 
 /**
- * Draw curved SVG conflict paths.
- * If country is missing in GeoJSON we skip the line and print a warning.
+ * Draw animated conflict connections using curved dashed SVG paths.
+ * Curves are easier to read than straight crossing lines.
  */
-export function ConflictLines({ conflicts, centroids, onHoverText }: ConflictLinesProps) {
+export function ConflictLines({ conflicts, project, onHoverText }: ConflictLinesProps) {
+  const active = conflicts.filter((item) => item.end === null)
+
   return (
     <g>
-      {conflicts.map((conflict, index) => {
-        const from = centroids.get(conflict.country)
-        const to = centroids.get(conflict.opponent)
+      {active.map((item) => {
+        const from = project([item.lon, item.lat])
+        const to = project([item.opponentLon, item.opponentLat])
+        if (!from || !to) return null
 
-        if (!from || !to) {
-          console.warn(`Conflict skipped (country not found): ${conflict.country} -> ${conflict.opponent}`)
-          return null
-        }
+        const midpoint: [number, number] = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 - 20]
 
-        const control: [number, number] = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 - 24]
-
-        const pathData = line<[number, number]>()
+        const path = line<[number, number]>()
           .curve(curveBasis)
-          .x((point: [number, number]) => point[0])
-          .y((point: [number, number]) => point[1])([from, control, to])
+          .x((point) => point[0])
+          .y((point) => point[1])([from, midpoint, to])
 
         return (
           <path
-            key={`${conflict.country}-${conflict.opponent}-${index}`}
-            d={pathData ?? undefined}
-            className={`conflict-line ${conflict.active === false ? 'historical' : 'active'}`}
-            onMouseEnter={() => onHoverText(`${conflict.country} vs ${conflict.opponent}`)}
+            key={item.id}
+            d={path ?? undefined}
+            className="conflict-line"
+            onMouseEnter={() => onHoverText(`${item.country} vs ${item.opponent} • ${item.start}`)}
             onMouseLeave={() => onHoverText('')}
           />
         )

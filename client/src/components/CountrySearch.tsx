@@ -4,19 +4,21 @@ type CountrySearchProps = {
   onSelectCountry: (country: string) => void
 }
 
-/** Country search with native browser autocomplete. */
+/**
+ * Simple searchable country input with native datalist autocomplete.
+ */
 export function CountrySearch({ countries, selectedCountry, onSelectCountry }: CountrySearchProps) {
   return (
     <div className="panel search-panel">
       <label htmlFor="country-search">Country search</label>
       <input
         id="country-search"
-        list="country-options"
+        list="country-list"
         value={selectedCountry}
         onChange={(event) => onSelectCountry(event.target.value)}
-        placeholder="Type country name"
+        placeholder="Type any country"
       />
-      <datalist id="country-options">
+      <datalist id="country-list">
         {countries.map((country) => (
           <option key={country} value={country} />
         ))}

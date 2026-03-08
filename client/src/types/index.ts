@@ -1,15 +1,19 @@
 export type Conflict = {
+  id: string
   country: string
   opponent: string
-  start?: string
-  active?: boolean
+  lat: number
+  lon: number
+  opponentLat: number
+  opponentLon: number
+  start: string
+  end: string | null
+  description: string
 }
 
 export type Metrics = {
   totalConflicts: number
   activeConflicts: number
-  countriesAtWar: number
-  globalDaysWithoutWar: number
-  selectedCountryConflicts: number
-  selectedCountryDaysWithoutWar: number
+  daysWithoutWarWorld: number
+  daysWithoutWarSelected: number
 }
