@@ -25,14 +25,18 @@ function daysWithoutWar(conflicts: Conflict[]): number {
 
 /** Build small dashboard metrics from current filtered conflicts. */
 function buildMetrics(allConflicts: Conflict[], visibleConflicts: Conflict[], selectedCountry: string): Metrics {
-  const activeConflicts = visibleConflicts.filter((conflict) => conflict.active).length
+  const activeConflicts = visibleConflicts.filter((conflict) => conflict.active !== false).length
 
   const countriesAtWar = new Set(
-    visibleConflicts.filter((conflict) => conflict.active).flatMap((conflict) => [conflict.country, conflict.opponent])
+    visibleConflicts
+      .filter((conflict) => conflict.active !== false)
+      .flatMap((conflict) => [conflict.country, conflict.opponent])
   ).size
 
   const selectedScope = selectedCountry
-    ? visibleConflicts.filter((conflict) => conflict.country === selectedCountry || conflict.opponent === selectedCountry)
+    ? visibleConflicts.filter(
+        (conflict) => conflict.country === selectedCountry || conflict.opponent === selectedCountry
+      )
     : visibleConflicts
 
   return {
@@ -68,7 +72,7 @@ export default function App() {
     load()
   }, [])
 
-  // Keyboard shortcuts: focus search, close country panel, reset map zoom.
+  // Keyboard shortcuts
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key.toLowerCase() === 'f') {
@@ -119,7 +123,9 @@ export default function App() {
 
   const selectedCountryConflicts = useMemo(() => {
     if (!selectedCountry) return []
-    return visibleConflicts.filter((conflict) => conflict.country === selectedCountry || conflict.opponent === selectedCountry)
+    return visibleConflicts.filter(
+      (conflict) => conflict.country === selectedCountry || conflict.opponent === selectedCountry
+    )
   }, [selectedCountry, visibleConflicts])
 
   const recentConflicts = useMemo(() => {
@@ -166,7 +172,9 @@ export default function App() {
               resetSignal={resetMapSignal}
             />
           )}
-          <footer className="panel footer-panel">{hoverText || 'Hover countries and lines for details.'}</footer>
+          <footer className="panel footer-panel">
+            {hoverText || 'Hover countries and lines for details.'}
+          </footer>
         </section>
 
         <aside className="side-column">
