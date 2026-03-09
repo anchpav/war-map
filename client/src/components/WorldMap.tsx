@@ -19,6 +19,14 @@ type Size = { width: number; height: number }
 type Tooltip = { x: number; y: number; text: string; visible: boolean }
 type LabelSize = 'large' | 'medium' | 'small'
 
+type CountryLabel = {
+  name: string
+  x: number
+  y: number
+  size: LabelSize
+  area: number
+}
+
 function useContainerSize() {
   const ref = useRef<HTMLDivElement | null>(null)
   const [size, setSize] = useState<Size>({ width: 1100, height: 620 })
@@ -63,6 +71,27 @@ function shouldShowLabel(zoomLevel: number, size: LabelSize): boolean {
   if (zoomLevel <= 2.5) return size === 'large'
   if (zoomLevel <= 4) return size === 'large' || size === 'medium'
   return true
+}
+
+/**
+ * Prevent local label collisions by keeping minimum distance between labels.
+ * We sort by area first so larger countries keep priority.
+ */
+function filterLabelOverlap(labels: CountryLabel[], zoomLevel: number): CountryLabel[] {
+  const minDistance = zoomLevel <= 2.5 ? 26 : zoomLevel <= 4 ? 18 : 10
+  const accepted: CountryLabel[] = []
+
+  for (const label of labels) {
+    const isOverlapping = accepted.some((placed) => {
+      const dx = placed.x - label.x
+      const dy = placed.y - label.y
+      return Math.hypot(dx, dy) < minDistance
+    })
+
+    if (!isOverlapping) accepted.push(label)
+  }
+
+  return accepted
 }
 
 export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry, onHoverText, resetSignal }: WorldMapProps) {
@@ -119,12 +148,18 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
         if (area > viewportArea * 0.01) labelSize = 'large'
         else if (area > viewportArea * 0.0035) labelSize = 'medium'
 
-        return { name, x: point[0], y: point[1], size: labelSize }
+        return { name, x: point[0], y: point[1], size: labelSize, area }
       })
-      .filter((label): label is { name: string; x: number; y: number; size: LabelSize } => label !== null)
+      .filter((label): label is CountryLabel => label !== null)
   }, [geoData, centroids, pathBuilder, size.width, size.height])
 
-  const visibleLabels = useMemo(() => labels.filter((label) => shouldShowLabel(zoomLevel, label.size)), [labels, zoomLevel])
+  const visibleLabels = useMemo(() => {
+    const allowed = labels
+      .filter((label) => shouldShowLabel(zoomLevel, label.size))
+      .sort((a, b) => b.area - a.area)
+
+    return filterLabelOverlap(allowed, zoomLevel)
+  }, [labels, zoomLevel])
 
   const activeRoutes = useMemo(() => {
     return conflicts

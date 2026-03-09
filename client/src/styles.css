@@ -230,18 +230,18 @@ body {
 }
 
 .country-label.large {
-  font-size: 8px;
-  opacity: 0.9;
+  font-size: 7.5px;
+  opacity: 0.88;
 }
 
 .country-label.medium {
-  font-size: 7px;
-  opacity: 0.82;
+  font-size: 6.5px;
+  opacity: 0.78;
 }
 
 .country-label.small {
-  font-size: 6px;
-  opacity: 0.72;
+  font-size: 5.5px;
+  opacity: 0.7;
 }
 
 /* Tactical conflict routes: subtle animated dash + glow. */
