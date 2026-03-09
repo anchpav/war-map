@@ -1,74 +1,7 @@
 [
-  {
-    "country": "Ukraine",
-    "opponent": "Russia",
-    "start": "2022-02-24",
-    "end": null
-  },
-  {
-    "country": "Israel",
-    "opponent": "Hamas",
-    "start": "2023-10-07",
-    "end": null
-  },
-  {
-    "country": "Sudan",
-    "opponent": "Rapid Support Forces",
-    "start": "2023-04-15",
-    "end": null
-  },
-  {
-    "country": "Myanmar",
-    "opponent": "Anti-Junta Forces",
-    "start": "2021-02-01",
-    "end": null
-  },
-  {
-    "country": "Democratic Republic of Congo",
-    "opponent": "M23 Rebels",
-    "start": "2022-03-23",
-    "end": null
-  },
-  {
-    "country": "Yemen",
-    "opponent": "Houthi Movement",
-    "start": "2014-09-21",
-    "end": null
-  },
-  {
-    "country": "Syria",
-    "opponent": "Various Rebel Factions",
-    "start": "2011-03-15",
-    "end": null
-  },
-  {
-    "country": "Ethiopia",
-    "opponent": "Regional Armed Groups",
-    "start": "2020-11-04",
-    "end": null
-  },
-  {
-    "country": "Somalia",
-    "opponent": "Al-Shabaab",
-    "start": "2006-06-05",
-    "end": null
-  },
-  {
-    "country": "Mali",
-    "opponent": "Islamist Insurgents",
-    "start": "2012-01-17",
-    "end": null
-  },
-  {
-    "country": "Burkina Faso",
-    "opponent": "Islamist Insurgents",
-    "start": "2015-04-03",
-    "end": null
-  },
-  {
-    "country": "Niger",
-    "opponent": "Islamist Insurgents",
-    "start": "2015-05-06",
-    "end": null
-  }
+  {"country": "Russia", "opponent": "Ukraine", "start": "2022-02-24", "active": true},
+  {"country": "Israel", "opponent": "Palestine", "start": "2023-10-07", "active": true},
+  {"country": "Syria", "opponent": "Turkey", "start": "2011-03-15", "active": true},
+  {"country": "Armenia", "opponent": "Azerbaijan", "start": "2020-09-27", "active": false},
+  {"country": "Iraq", "opponent": "United States", "start": "1990-08-02", "active": false}
 ]

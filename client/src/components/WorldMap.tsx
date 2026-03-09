@@ -67,9 +67,9 @@ function buildHeatMap(conflicts: Conflict[]) {
  * - higher zoom: progressively include more labels
  */
 function shouldShowLabel(zoomLevel: number, size: LabelSize): boolean {
-  if (zoomLevel <= 1.5) return false
-  if (zoomLevel <= 2.5) return size === 'large'
-  if (zoomLevel <= 4) return size === 'large' || size === 'medium'
+  if (zoomLevel <= 1.8) return false
+  if (zoomLevel <= 2.8) return size === 'large'
+  if (zoomLevel <= 4.2) return size === 'large' || size === 'medium'
   return true
 }
 
@@ -78,7 +78,7 @@ function shouldShowLabel(zoomLevel: number, size: LabelSize): boolean {
  * We sort by area first so larger countries keep priority.
  */
 function filterLabelOverlap(labels: CountryLabel[], zoomLevel: number): CountryLabel[] {
-  const minDistance = zoomLevel <= 2.5 ? 26 : zoomLevel <= 4 ? 18 : 10
+  const minDistance = zoomLevel <= 2.8 ? 30 : zoomLevel <= 4.2 ? 22 : 14
   const accepted: CountryLabel[] = []
 
   for (const label of labels) {
@@ -100,6 +100,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
   const zoomLayerRef = useRef<SVGGElement | null>(null)
   const countriesLayerRef = useRef<SVGGElement | null>(null)
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+  const autoZoomedCountryRef = useRef('')
 
   const [zoomLevel, setZoomLevel] = useState(1)
   const [tooltip, setTooltip] = useState<Tooltip>({ x: 0, y: 0, text: '', visible: false })
@@ -144,9 +145,10 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
         const height = Math.max(0, bounds[1][1] - bounds[0][1])
         const area = width * height
 
+        // Stricter projected-area buckets keep Europe readable at world view.
         let labelSize: LabelSize = 'small'
-        if (area > viewportArea * 0.01) labelSize = 'large'
-        else if (area > viewportArea * 0.0035) labelSize = 'medium'
+        if (area > viewportArea * 0.016) labelSize = 'large'
+        else if (area > viewportArea * 0.006) labelSize = 'medium'
 
         return { name, x: point[0], y: point[1], size: labelSize, area }
       })
@@ -182,7 +184,6 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
 
     return () => window.clearInterval(timer)
   }, [retroMode, activeRoutes.length])
-
 
   const selectedPoint = useMemo(() => {
     if (!selectedCountry) return null
@@ -257,9 +258,16 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
       })
   }, [geoData, conflicts, selectedCountry, pathBuilder, heatMap, onHoverText, onSelectCountry])
 
-  // Country selection from search/map replaces previous target and auto-focuses bounds.
+  // Auto-zoom exactly once per newly selected country, then stay stable.
+  // This prevents repeated repositioning during unrelated re-renders.
   useEffect(() => {
-    if (!selectedCountry || !svgRef.current || !zoomRef.current) return
+    if (!selectedCountry) {
+      autoZoomedCountryRef.current = ''
+      return
+    }
+
+    if (!svgRef.current || !zoomRef.current) return
+    if (autoZoomedCountryRef.current === selectedCountry) return
 
     const target = geoData.features.find((feature) => getCountryName(feature) === selectedCountry)
     if (!target) return
@@ -274,11 +282,13 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     const tx = size.width / 2 - scale * x
     const ty = size.height / 2 - scale * y
 
+    autoZoomedCountryRef.current = selectedCountry
     select(svgRef.current).call(zoomRef.current.transform as any, zoomIdentity.translate(tx, ty).scale(scale))
   }, [selectedCountry, geoData, pathBuilder, size.width, size.height])
 
   useEffect(() => {
     if (!svgRef.current || !zoomRef.current) return
+    autoZoomedCountryRef.current = ''
     select(svgRef.current).call(zoomRef.current.transform as any, zoomIdentity)
   }, [resetSignal])
 
