@@ -45,6 +45,7 @@ war-map/
 ├ run.ps1
 └ package.json
 ```
+<<<<<<< codex/create-global-war-tracker-web-application-8hgxwb
 
 ## Run locally
 
@@ -107,3 +108,31 @@ python scripts/updateConflicts.py --provider deepseek --input scripts/sample_new
 - Deduplication is pair-based and conservative updates are confidence-gated.
 - Script logs skipped entries for manual review.
 
+=======
+
+## Run locally
+
+### Backend
+
+```bash
+cd server
+node index.js
+```
+
+### Frontend
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+UI: `http://localhost:5173`
+
+## Notes
+
+- `WorldMap.tsx` memoizes heavy projection/path work for stable performance.
+- Country labels are rendered only when zoom level is above `2`.
+- Conflict lines are curved SVG paths with CSS dash animation (lightweight strategy-map style).
+- Data is loaded once on startup (`/api/conflicts` with fallback to `/data/conflicts.json`).
+>>>>>>> main
