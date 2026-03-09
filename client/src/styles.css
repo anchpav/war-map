@@ -1,367 +1,518 @@
-import { geoCentroid, geoMercator, geoPath, type GeoPermissibleObjects } from 'd3-geo'
-import { select } from 'd3-selection'
-import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Conflict, CountryFeatureCollection } from '../types'
-import { getCountryName } from '../services/geoService'
-import { ConflictLines } from './ConflictLines'
-
-type WorldMapProps = {
-  geoData: CountryFeatureCollection
-  conflicts: Conflict[]
-  selectedCountry: string
-  onSelectCountry: (country: string) => void
-  onHoverText: (text: string) => void
-  resetSignal: number
+:root {
+  --ocean: #071b2b;
+  --land: #2c3e55;
+  --border: #3b4a61;
+  --hover: #38bdf8;
+  --selected: #0ea5e9;
+  --conflict: #ff4d4d;
+  --panel: #0e1a26;
+  --panel-border: #2a3c50;
+  --text: #d6e4f0;
+  --text-muted: #8aa3b8;
 }
 
-type Size = { width: number; height: number }
-type Tooltip = { x: number; y: number; text: string; visible: boolean }
-type LabelSize = 'large' | 'medium' | 'small'
-
-type CountryLabel = {
-  name: string
-  x: number
-  y: number
-  size: LabelSize
-  area: number
+* {
+  box-sizing: border-box;
 }
 
-function useContainerSize() {
-  const ref = useRef<HTMLDivElement | null>(null)
-  const [size, setSize] = useState<Size>({ width: 1100, height: 620 })
-
-  useEffect(() => {
-    if (!ref.current) return
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-
-      setSize({
-        width: Math.max(320, entry.contentRect.width),
-        height: Math.max(360, entry.contentRect.width * 0.5)
-      })
-    })
-
-    observer.observe(ref.current)
-    return () => observer.disconnect()
-  }, [])
-
-  return { ref, size }
+html,
+body,
+#root {
+  height: 100%;
 }
 
-function buildHeatMap(conflicts: Conflict[]) {
-  const heat = new Map<string, number>()
-
-  conflicts.forEach((conflict) => {
-    heat.set(conflict.country, (heat.get(conflict.country) ?? 0) + 1)
-
-    const opponentType = (conflict as any).opponentType
-    if (!opponentType || opponentType === 'state') {
-      heat.set(conflict.opponent, (heat.get(conflict.opponent) ?? 0) + 1)
-    }
-  })
-
-  return heat
+body {
+  margin: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0b1f32 0, #081521 45%, #060f18 100%);
+  color: var(--text);
+  font-family: Inter, Arial, sans-serif;
 }
 
-function shouldShowLabel(zoomLevel: number, size: LabelSize): boolean {
-  if (zoomLevel <= 1.3) return false
-  if (zoomLevel <= 2.4) return size === 'large'
-  if (zoomLevel <= 4) return size === 'large' || size === 'medium'
-  return true
+.tactical-shell {
+  width: min(1420px, 98vw);
+  height: 100vh;
+  margin: 0 auto;
+  padding: 0.4rem;
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  gap: 0.32rem;
 }
 
-function filterLabelOverlap(labels: CountryLabel[], zoomLevel: number): CountryLabel[] {
-  const minDistance = zoomLevel <= 2.5 ? 26 : zoomLevel <= 4 ? 18 : 10
-  const accepted: CountryLabel[] = []
+.panel {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(14, 26, 38, 0.96) 0%, rgba(10, 21, 31, 0.95) 100%);
+  box-shadow: inset 0 0 0 1px rgba(124, 168, 207, 0.08), 0 0 12px rgba(6, 13, 21, 0.45);
+}
 
-  for (const label of labels) {
-    const isOverlapping = accepted.some((placed) => {
-      const dx = placed.x - label.x
-      const dy = placed.y - label.y
-      return Math.hypot(dx, dy) < minDistance
-    })
+.header-row {
+  padding: 0.34rem 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
 
-    if (!isOverlapping) accepted.push(label)
+.tactical-header h1 {
+  margin: 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tactical-header p {
+  margin: 0.12rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.header-tag {
+  display: inline-block;
+  margin-top: 0.18rem;
+  padding: 0.08rem 0.35rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fc3e3;
+  border: 1px solid #3a5674;
+  border-radius: 999px;
+}
+
+.btn-mini {
+  border: 1px solid #3f566f;
+  border-radius: 6px;
+  background: #142638;
+  color: var(--text);
+  padding: 0.32rem 0.5rem;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.btn-mini:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-secondary {
+  opacity: 0.82;
+}
+
+.status-row {
+  padding: 0.26rem 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.32rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.tactical-status {
+  border-color: #31465d;
+}
+
+.status-row small {
+  opacity: 0.85;
+}
+
+.control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 0.32rem;
+}
+
+.search-panel,
+.timeline-panel {
+  padding: 0.3rem 0.46rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.search-panel label,
+.timeline-panel label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.search-panel input,
+.timeline-panel input {
+  width: 100%;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #0b1622;
+  color: var(--text);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.metrics-grid {
+  display: grid;
+  gap: 0.28rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.metric-card {
+  padding: 0.3rem 0.44rem;
+  position: relative;
+}
+
+.metric-card span {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 0.08rem;
+  font-size: 1.08rem;
+  letter-spacing: 0.02em;
+}
+
+.metric-card.alert strong {
+  color: #ff8e8e;
+}
+
+.main-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  gap: 0.32rem;
+}
+
+.map-stack {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.28rem;
+}
+
+.map-panel {
+  min-height: 0;
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.world-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.ocean {
+  fill: var(--ocean);
+}
+
+.country {
+  fill: var(--land);
+  stroke: var(--border);
+  stroke-width: 0.65;
+  cursor: pointer;
+  transition: fill 0.16s ease, stroke 0.16s ease, opacity 0.16s ease;
+}
+
+.country:hover {
+  fill: var(--hover);
+}
+
+.country.selected {
+  fill: var(--selected);
+}
+
+.country.heat-1 {
+  fill: #3c526f;
+}
+
+.country.heat-3 {
+  fill: #7ea6dc;
+}
+
+.country.conflict {
+  stroke: #8cb3e8;
+}
+
+.country-label {
+  font-weight: 400;
+  fill: #a9bfd8;
+  opacity: 0.68;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+
+.country-label.large {
+  font-size: 9px;
+}
+
+.country-label.medium {
+  font-size: 8px;
+}
+
+.country-label.small {
+  font-size: 7px;
+}
+
+.conflict-line-halo {
+  fill: none;
+  stroke: rgba(255, 77, 77, 0.22);
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.conflict-line {
+  fill: none;
+  stroke: var(--conflict);
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-dasharray: 8 7;
+  filter: drop-shadow(0 0 6px var(--conflict));
+  animation: flow 1.4s linear infinite, pulse 2.8s ease-in-out infinite;
+}
+
+.conflict-line.historical {
+  opacity: 0.34;
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.48;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.map-tooltip {
+  position: absolute;
+  pointer-events: none;
+  font-size: 11px;
+  border: 1px solid #4f6383;
+  border-radius: 6px;
+  background: rgba(8, 20, 34, 0.95);
+  padding: 3px 7px;
+  z-index: 5;
+}
+
+.retro-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  border: 1px solid #3d4f65;
+  border-radius: 5px;
+  background: rgba(8, 18, 29, 0.88);
+  color: #9dd1ff;
+  font-size: 11px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+
+.retro-toggle.active {
+  color: #f5ff97;
+  border-color: #8a9d40;
+}
+
+.retro-status {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 4;
+  border: 1px solid #3d4e5f;
+  border-radius: 5px;
+  background: rgba(5, 14, 24, 0.9);
+  color: #d5e89f;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.target-reticle {
+  pointer-events: none;
+}
+
+.target-ring {
+  fill: none;
+  stroke: rgba(56, 189, 248, 0.8);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+  animation: reticle-spin 4s linear infinite;
+}
+
+.target-core {
+  fill: rgba(14, 165, 233, 0.85);
+  filter: drop-shadow(0 0 4px rgba(14, 165, 233, 0.9));
+}
+
+.pixel-drone {
+  fill: #ebff65;
+  filter: drop-shadow(0 0 3px #f4ff8b);
+  animation: drone-blink 0.7s steps(2, end) infinite;
+}
+
+@keyframes reticle-spin {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes drone-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.side-column {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  gap: 0.28rem;
+}
+
+.side-panel {
+  padding: 0.34rem 0.46rem;
+}
+
+.intel-card {
+  border-color: #31465d;
+}
+
+.side-panel h3 {
+  margin: 0 0 0.28rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.side-panel p {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.intel-subtitle {
+  display: block;
+  margin: -0.08rem 0 0.3rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7f99b0;
+}
+
+.side-panel ul {
+  max-height: 92px;
+  overflow: auto;
+}
+
+.ai-status-card {
+  padding-bottom: 0.3rem;
+}
+
+.ai-status-list {
+  gap: 0.12rem;
+}
+
+.ai-admin-controls {
+  margin-top: 0.28rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.ai-admin-controls .btn-mini {
+  padding: 0.22rem 0.42rem;
+  font-size: 0.68rem;
+}
+
+.ai-admin-note {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  opacity: 0.9;
+}
+
+.compact-list {
+  margin: 0;
+  padding-left: 0.95rem;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.compact-list small {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.footer-panel {
+  min-height: 22px;
+  padding: 0.22rem 0.44rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.error {
+  padding: 0.32rem 0.52rem;
+  color: #fecaca;
+  border-color: #ef4444;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1100px) {
+  body {
+    overflow: auto;
   }
 
-  return accepted
+  .tactical-shell {
+    height: auto;
+    min-height: 100vh;
+    grid-template-rows: auto;
+  }
+
+  .control-row,
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .side-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
 }
 
-export function WorldMap({
-  geoData,
-  conflicts,
-  selectedCountry,
-  onSelectCountry,
-  onHoverText,
-  resetSignal
-}: WorldMapProps) {
-  const { ref, size } = useContainerSize()
-  const svgRef = useRef<SVGSVGElement | null>(null)
-  const zoomLayerRef = useRef<SVGGElement | null>(null)
-  const countriesLayerRef = useRef<SVGGElement | null>(null)
-  const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+@media (max-width: 760px) {
+  .header-row,
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-  const [zoomLevel, setZoomLevel] = useState(1)
-  const [tooltip, setTooltip] = useState<Tooltip>({ x: 0, y: 0, text: '', visible: false })
-  const [retroMode, setRetroMode] = useState(false)
-  const [patrolStep, setPatrolStep] = useState(0)
-
-  const projection = useMemo(
-    () => geoMercator().fitSize([size.width, size.height], geoData as GeoPermissibleObjects),
-    [geoData, size.width, size.height]
-  )
-
-  const pathBuilder = useMemo(() => geoPath(projection), [projection])
-  const heatMap = useMemo(() => buildHeatMap(conflicts), [conflicts])
-
-  const conflictCountries = useMemo(() => {
-    const set = new Set<string>()
-
-    conflicts.forEach((conflict) => {
-      if (conflict.country) set.add(conflict.country)
-
-      const opponentType = (conflict as any).opponentType
-      if (conflict.opponent && (!opponentType || opponentType === 'state')) {
-        set.add(conflict.opponent)
-      }
-    })
-
-    return set
-  }, [conflicts])
-
-  const centroids = useMemo(() => {
-    const map = new Map<string, [number, number]>()
-
-    geoData.features.forEach((feature) => {
-      const name = getCountryName(feature)
-      const [lon, lat] = geoCentroid(feature as GeoPermissibleObjects)
-      const point = projection([lon, lat])
-      if (point) map.set(name, [point[0], point[1]])
-    })
-
-    return map
-  }, [geoData, projection])
-
-  const labels = useMemo(() => {
-    const viewportArea = size.width * size.height
-
-    return geoData.features
-      .map((feature) => {
-        const name = getCountryName(feature)
-        const point = centroids.get(name)
-        if (!point) return null
-
-        const bounds = pathBuilder.bounds(feature as GeoPermissibleObjects)
-        const width = Math.max(0, bounds[1][0] - bounds[0][0])
-        const height = Math.max(0, bounds[1][1] - bounds[0][1])
-        const area = width * height
-
-        let labelSize: LabelSize = 'small'
-        if (area > viewportArea * 0.01) labelSize = 'large'
-        else if (area > viewportArea * 0.0035) labelSize = 'medium'
-
-        return { name, x: point[0], y: point[1], size: labelSize, area }
-      })
-      .filter((label): label is CountryLabel => label !== null)
-  }, [geoData, centroids, pathBuilder, size.width, size.height])
-
-  const visibleLabels = useMemo(() => {
-    const allowed = labels
-      .filter((label) => conflictCountries.has(label.name))
-      .filter((label) => shouldShowLabel(zoomLevel, label.size))
-      .sort((a, b) => b.area - a.area)
-
-    return filterLabelOverlap(allowed, zoomLevel)
-  }, [labels, zoomLevel, conflictCountries])
-
-  const activeRoutes = useMemo(() => {
-    return conflicts
-      .filter((conflict) => conflict.active !== false)
-      .map((conflict) => {
-        const opponentType = (conflict as any).opponentType
-        if (opponentType && opponentType !== 'state') return null
-
-        const from = centroids.get(conflict.country)
-        const to = centroids.get(conflict.opponent)
-        if (!from || !to) return null
-
-        return { from, to }
-      })
-      .filter((route): route is { from: [number, number]; to: [number, number] } => route !== null)
-  }, [conflicts, centroids])
-
-  useEffect(() => {
-    if (!retroMode || activeRoutes.length === 0) return
-
-    const timer = window.setInterval(() => {
-      setPatrolStep((prev) => (prev + 1) % (activeRoutes.length * 22))
-    }, 130)
-
-    return () => window.clearInterval(timer)
-  }, [retroMode, activeRoutes.length])
-
-  const selectedPoint = useMemo(() => {
-    if (!selectedCountry) return null
-    return centroids.get(selectedCountry) ?? null
-  }, [selectedCountry, centroids])
-
-  const patrolPoint = useMemo(() => {
-    if (!retroMode || activeRoutes.length === 0) return null
-
-    const routeIndex = Math.floor(patrolStep / 22) % activeRoutes.length
-    const progress = (patrolStep % 22) / 21
-    const route = activeRoutes[routeIndex]
-
-    return {
-      x: route.from[0] + (route.to[0] - route.from[0]) * progress,
-      y: route.from[1] + (route.to[1] - route.from[1]) * progress,
-      routeIndex: routeIndex + 1,
-      routeCount: activeRoutes.length
-    }
-  }, [retroMode, activeRoutes, patrolStep])
-
-  useEffect(() => {
-    if (!svgRef.current || !zoomLayerRef.current) return
-
-    const svg = select(svgRef.current)
-    const zoomLayer = select(zoomLayerRef.current)
-
-    const behavior = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([1, 8])
-      .filter((event: any) => {
-        // Оставляем только zoom колесом.
-        // Drag-pan отключаем полностью.
-        return event.type === 'wheel'
-      })
-      .on('zoom', (event) => {
-        zoomLayer.attr('transform', event.transform)
-        setZoomLevel(event.transform.k)
-      })
-
-    zoomRef.current = behavior
-    svg.call(behavior)
-  }, [])
-
-  useEffect(() => {
-    if (!countriesLayerRef.current) return
-
-    const countriesLayer = select(countriesLayerRef.current)
-
-    countriesLayer
-      .selectAll<SVGPathElement, any>('path.country-shape')
-      .data(geoData.features)
-      .join('path')
-      .attr('class', (feature: any) => {
-        const name = getCountryName(feature)
-        const isConflict = conflictCountries.has(name)
-        const isSelected = selectedCountry === name
-        const count = heatMap.get(name) ?? 0
-        const heatClass = count >= 3 ? 'heat-3' : count >= 1 ? 'heat-1' : ''
-        return `country country-shape ${isConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''} ${heatClass}`.trim()
-      })
-      .attr('d', (feature: any) => pathBuilder(feature as GeoPermissibleObjects) ?? '')
-      .on('mouseenter', (event: MouseEvent, feature: any) => {
-        const name = getCountryName(feature)
-        onHoverText(name)
-        setTooltip({ x: event.offsetX + 10, y: event.offsetY + 10, text: name, visible: true })
-      })
-      .on('mousemove', (event: MouseEvent) => {
-        setTooltip((prev) => ({ ...prev, x: event.offsetX + 10, y: event.offsetY + 10 }))
-      })
-      .on('mouseleave', () => {
-        onHoverText('')
-        setTooltip((prev) => ({ ...prev, visible: false }))
-      })
-      .on('click', (_event: MouseEvent, feature: any) => {
-        onSelectCountry(getCountryName(feature))
-      })
-  }, [geoData, conflictCountries, selectedCountry, pathBuilder, heatMap, onHoverText, onSelectCountry])
-
-  useEffect(() => {
-    if (!selectedCountry || !svgRef.current || !zoomRef.current) return
-
-    const target = geoData.features.find((feature) => getCountryName(feature) === selectedCountry)
-    if (!target) return
-
-    const bounds = pathBuilder.bounds(target as GeoPermissibleObjects)
-    const dx = bounds[1][0] - bounds[0][0]
-    const dy = bounds[1][1] - bounds[0][1]
-    const x = (bounds[0][0] + bounds[1][0]) / 2
-    const y = (bounds[0][1] + bounds[1][1]) / 2
-
-    const scale = Math.max(1, Math.min(8, 0.9 / Math.max(dx / size.width, dy / size.height)))
-    const tx = size.width / 2 - scale * x
-    const ty = size.height / 2 - scale * y
-
-    select(svgRef.current)
-      .transition()
-      .duration(500)
-      .call(zoomRef.current.transform as any, zoomIdentity.translate(tx, ty).scale(scale))
-  }, [selectedCountry, geoData, pathBuilder, size.width, size.height])
-
-  useEffect(() => {
-    if (!svgRef.current || !zoomRef.current) return
-    select(svgRef.current).call(zoomRef.current.transform as any, zoomIdentity)
-  }, [resetSignal])
-
-  return (
-    <section className="panel map-panel" ref={ref}>
-      <button
-        type="button"
-        className={`retro-toggle ${retroMode ? 'active' : ''}`}
-        onClick={() => setRetroMode((v) => !v)}
-      >
-        {retroMode ? '8-bit ON' : '8-bit'}
-      </button>
-
-      <svg
-        ref={svgRef}
-        className="world-svg"
-        width={size.width}
-        height={size.height}
-        role="img"
-        aria-label="World conflict map"
-      >
-        <rect className="ocean" width={size.width} height={size.height} />
-
-        <g ref={zoomLayerRef}>
-          <g ref={countriesLayerRef} />
-          <ConflictLines conflicts={conflicts} centroids={centroids} onHoverText={onHoverText} />
-
-          <g>
-            {visibleLabels.map((label) => (
-              <text key={label.name} x={label.x} y={label.y} className={`country-label ${label.size}`}>
-                {label.name}
-              </text>
-            ))}
-          </g>
-
-          {selectedPoint && (
-            <g className="target-reticle">
-              <circle cx={selectedPoint[0]} cy={selectedPoint[1]} r={9} className="target-ring" />
-              <circle cx={selectedPoint[0]} cy={selectedPoint[1]} r={3} className="target-core" />
-            </g>
-          )}
-
-          {patrolPoint && (
-            <g>
-              <rect x={patrolPoint.x - 3} y={patrolPoint.y - 3} width={6} height={6} className="pixel-drone" />
-              <rect x={patrolPoint.x - 1} y={patrolPoint.y - 8} width={2} height={2} className="pixel-drone" />
-            </g>
-          )}
-        </g>
-      </svg>
-
-      {patrolPoint && <div className="retro-status">Patrol {patrolPoint.routeIndex}/{patrolPoint.routeCount}</div>}
-
-      {tooltip.visible && (
-        <div className="map-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
-          {tooltip.text}
-        </div>
-      )}
-    </section>
-  )
+  .metrics-grid,
+  .side-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
