@@ -385,7 +385,7 @@ body {
 .side-column {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
   gap: 0.28rem;
 }
 
@@ -422,6 +422,34 @@ body {
 .side-panel ul {
   max-height: 92px;
   overflow: auto;
+}
+
+
+.ai-status-card {
+  padding-bottom: 0.3rem;
+}
+
+.ai-status-list {
+  gap: 0.12rem;
+}
+
+.ai-admin-controls {
+  margin-top: 0.28rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.ai-admin-controls .btn-mini {
+  padding: 0.22rem 0.42rem;
+  font-size: 0.68rem;
+}
+
+.ai-admin-note {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  opacity: 0.9;
 }
 
 .compact-list {

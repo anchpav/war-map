@@ -7,49 +7,91 @@ import { getCountryName, loadWorldGeoData } from './services/geoService'
 import type { Conflict, CountryFeatureCollection, Metrics } from './types'
 
 const START_YEAR = 1900
+const isAdmin = false
+
+type ConflictWithEnd = Conflict & { end?: string }
+
+type AIStatus = {
+  available: boolean
+  lastRefresh: string
+  suggestedCount: number
+  mode: 'preview' | 'applied'
+}
 
 function daysSince(dateText: string): number {
   const ms = Date.now() - new Date(dateText).getTime()
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)))
 }
 
-/** Return days since last conflict start date in the provided scope. */
-function daysWithoutWar(conflicts: Conflict[]): number {
+function yearFromDate(dateText?: string): number | null {
+  if (!dateText) return null
+  const year = Number(dateText.slice(0, 4))
+  return Number.isFinite(year) ? year : null
+}
+
+/**
+ * Timeline-aware active-state logic used by metrics.
+ * Active means started on/before selected year and has no end or ends after selected year.
+ */
+function isActiveInYear(conflict: ConflictWithEnd, selectedYear: number): boolean {
+  const startYear = yearFromDate(conflict.start)
+  if (startYear !== null && startYear > selectedYear) return false
+
+  const endYear = yearFromDate(conflict.end)
+  if (endYear !== null && endYear < selectedYear) return false
+
+  if (conflict.active === true) return true
+
+  return endYear === null
+}
+
+/**
+ * Days without active war in a scope:
+ * - 0 when at least one active conflict exists in selected year
+ * - otherwise since most recently ended conflict
+ */
+function daysWithoutActiveWar(conflicts: ConflictWithEnd[], selectedYear: number): number {
   if (!conflicts.length) return 0
 
-  const latest = conflicts
-    .map((conflict) => conflict.start)
+  const hasActive = conflicts.some((conflict) => isActiveInYear(conflict, selectedYear))
+  if (hasActive) return 0
+
+  const lastEnded = conflicts
+    .map((conflict) => conflict.end)
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => b.localeCompare(a))[0]
 
-  return latest ? daysSince(latest) : 0
+  return lastEnded ? daysSince(lastEnded) : 0
 }
 
-/** Build compact tactical metrics from current map scope. */
-function buildMetrics(allConflicts: Conflict[], visibleConflicts: Conflict[], selectedCountry: string): Metrics {
-  const activeConflicts = visibleConflicts.filter((conflict) => conflict.active).length
+/** Build timeline-aware tactical metrics for world + selected country scope. */
+function buildMetrics(allConflicts: ConflictWithEnd[], selectedCountry: string, selectedYear: number): Metrics {
+  const inTimeline = allConflicts.filter((conflict) => {
+    const startYear = yearFromDate(conflict.start)
+    return startYear === null || startYear <= selectedYear
+  })
 
-  const countriesAtWar = new Set(
-    visibleConflicts.filter((conflict) => conflict.active).flatMap((conflict) => [conflict.country, conflict.opponent])
-  ).size
+  const activeConflictsList = inTimeline.filter((conflict) => isActiveInYear(conflict, selectedYear))
+
+  const countriesAtWar = new Set(activeConflictsList.flatMap((conflict) => [conflict.country, conflict.opponent])).size
 
   const selectedScope = selectedCountry
-    ? visibleConflicts.filter((conflict) => conflict.country === selectedCountry || conflict.opponent === selectedCountry)
-    : visibleConflicts
+    ? inTimeline.filter((conflict) => conflict.country === selectedCountry || conflict.opponent === selectedCountry)
+    : inTimeline
 
   return {
-    totalConflicts: visibleConflicts.length,
-    activeConflicts,
+    totalConflicts: inTimeline.length,
+    activeConflicts: activeConflictsList.length,
     countriesAtWar,
-    globalDaysWithoutWar: daysWithoutWar(allConflicts),
+    globalDaysWithoutWar: daysWithoutActiveWar(inTimeline, selectedYear),
     selectedCountryConflicts: selectedScope.length,
-    selectedCountryDaysWithoutWar: daysWithoutWar(selectedScope)
+    selectedCountryDaysWithoutWar: daysWithoutActiveWar(selectedScope, selectedYear)
   }
 }
 
 export default function App() {
   const [geoData, setGeoData] = useState<CountryFeatureCollection | null>(null)
-  const [conflicts, setConflicts] = useState<Conflict[]>([])
+  const [conflicts, setConflicts] = useState<ConflictWithEnd[]>([])
   const [selectedCountry, setSelectedCountry] = useState('')
   const [hoverText, setHoverText] = useState('')
   const [error, setError] = useState('')
@@ -65,7 +107,7 @@ export default function App() {
 
       const [world, loadedConflicts] = await Promise.all([loadWorldGeoData(), loadConflicts()])
       setGeoData(world)
-      setConflicts(loadedConflicts)
+      setConflicts(loadedConflicts as ConflictWithEnd[])
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data.')
@@ -109,9 +151,8 @@ export default function App() {
 
   const timelineFilteredConflicts = useMemo(() => {
     return conflicts.filter((conflict) => {
-      if (!conflict.start) return true
-      const year = Number(conflict.start.slice(0, 4))
-      return year <= timelineYear
+      const year = yearFromDate(conflict.start)
+      return year === null || year <= timelineYear
     })
   }, [conflicts, timelineYear])
 
@@ -123,10 +164,7 @@ export default function App() {
     )
   }, [timelineFilteredConflicts, selectedCountry])
 
-  const metrics = useMemo(
-    () => buildMetrics(conflicts, visibleConflicts, selectedCountry),
-    [conflicts, visibleConflicts, selectedCountry]
-  )
+  const metrics = useMemo(() => buildMetrics(conflicts, selectedCountry, timelineYear), [conflicts, selectedCountry, timelineYear])
 
   const selectedCountryConflicts = useMemo(() => {
     if (!selectedCountry) return []
@@ -139,6 +177,13 @@ export default function App() {
       .sort((a, b) => String(b.start).localeCompare(String(a.start)))
       .slice(0, 3)
   }, [visibleConflicts])
+
+  const aiStatus: AIStatus = {
+    available: true,
+    lastRefresh: '—',
+    suggestedCount: 0,
+    mode: 'preview'
+  }
 
   return (
     <main className="app-shell tactical-shell">
@@ -201,6 +246,25 @@ export default function App() {
               <li>Red routes = conflict flows</li>
               <li>Hover = target tooltip</li>
             </ul>
+          </section>
+
+          <section className="panel side-panel intel-card ai-status-card">
+            <h3>AI conflict feed</h3>
+            <small className="intel-subtitle">Staged refresh channel</small>
+            <ul className="compact-list ai-status-list">
+              <li>AI update available: {aiStatus.available ? 'Yes' : 'No'}</li>
+              <li>Last AI refresh: {aiStatus.lastRefresh}</li>
+              <li>Suggested conflicts: {aiStatus.suggestedCount}</li>
+              <li>AI mode: {aiStatus.mode}</li>
+            </ul>
+            {isAdmin ? (
+              <div className="ai-admin-controls">
+                <button type="button" className="btn-mini">AI Refresh</button>
+                <button type="button" className="btn-mini btn-secondary">Apply AI</button>
+              </div>
+            ) : (
+              <small className="ai-admin-note">Admin controls hidden</small>
+            )}
           </section>
 
           <section className="panel side-panel intel-card">
