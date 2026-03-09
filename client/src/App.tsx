@@ -25,7 +25,7 @@ function daysWithoutWar(conflicts: Conflict[]): number {
   return latest ? daysSince(latest) : 0
 }
 
-/** Build compact dashboard metrics from current timeline/country scope. */
+/** Build compact tactical metrics from current map scope. */
 function buildMetrics(allConflicts: Conflict[], visibleConflicts: Conflict[], selectedCountry: string): Metrics {
   const activeConflicts = visibleConflicts.filter((conflict) => conflict.active).length
 
@@ -58,7 +58,6 @@ export default function App() {
   const [resetMapSignal, setResetMapSignal] = useState(0)
   const [lastUpdated, setLastUpdated] = useState('')
 
-  // Shared loader for startup + refresh button.
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true)
@@ -79,7 +78,6 @@ export default function App() {
     loadDashboardData()
   }, [loadDashboardData])
 
-  // Keyboard shortcuts kept lightweight: search focus, clear selection, reset map.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key.toLowerCase() === 'f') {
@@ -143,19 +141,19 @@ export default function App() {
   }, [visibleConflicts])
 
   return (
-    <main className="app-shell">
-      <header className="panel header-row">
+    <main className="app-shell tactical-shell">
+      <header className="panel header-row tactical-header">
         <div>
           <h1>Global War Tracker</h1>
-          <p>{loading ? 'Syncing live data...' : `Operational • Updated ${lastUpdated || '—'}`}</p>
+          <p>{loading ? 'Tactical feed sync in progress…' : `Command feed online • ${lastUpdated || '—'}`}</p>
         </div>
         <button type="button" className="btn-mini" onClick={loadDashboardData} disabled={loading}>
           {loading ? 'Sync…' : 'Refresh'}
         </button>
       </header>
 
-      <section className="panel status-row">
-        <span>{selectedCountry ? `Focused country: ${selectedCountry}` : 'Focused country: Global overview'}</span>
+      <section className="panel status-row tactical-status">
+        <span>{selectedCountry ? `Target: ${selectedCountry}` : 'Target: Global overview'}</span>
         <button type="button" className="btn-mini btn-secondary" title="Reset map view (R)" onClick={() => setResetMapSignal((v) => v + 1)}>
           Reset view
         </button>
@@ -197,17 +195,17 @@ export default function App() {
         </section>
 
         <aside className="side-column">
-          <section className="panel side-panel">
+          <section className="panel side-panel intel-card">
             <h3>Legend</h3>
             <ul className="compact-list">
               <li>Land brightness = conflict intensity</li>
-              <li>Red curves = conflict routes</li>
-              <li>Hover = country tooltip</li>
+              <li>Red routes = conflict flows</li>
+              <li>Hover = target tooltip</li>
             </ul>
           </section>
 
-          <section className="panel side-panel">
-            <h3>Recent conflicts</h3>
+          <section className="panel side-panel intel-card">
+            <h3>Operations log</h3>
             <ul className="compact-list">
               {recentConflicts.map((conflict, index) => (
                 <li key={`${conflict.country}-${conflict.opponent}-${index}`}>
@@ -218,12 +216,12 @@ export default function App() {
             </ul>
           </section>
 
-          <section className="panel side-panel">
-            <h3>{selectedCountry || 'No country selected'}</h3>
+          <section className="panel side-panel intel-card">
+            <h3>{selectedCountry || 'No target selected'}</h3>
             <p>
               {selectedCountry
                 ? `${selectedCountryConflicts.length} linked conflict${selectedCountryConflicts.length === 1 ? '' : 's'}`
-                : 'Select country from search or map'}
+                : 'Select a country from map or search'}
             </p>
             {selectedCountry && (
               <ul className="compact-list">

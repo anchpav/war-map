@@ -17,8 +17,7 @@ type WorldMapProps = {
 
 type Size = { width: number; height: number }
 type Tooltip = { x: number; y: number; text: string; visible: boolean }
-
-const LABELS_ZOOM_THRESHOLD = 2
+type LabelSize = 'large' | 'medium' | 'small'
 
 function useContainerSize() {
   const ref = useRef<HTMLDivElement | null>(null)
@@ -53,6 +52,19 @@ function buildHeatMap(conflicts: Conflict[]) {
   return heat
 }
 
+/**
+ * Smart label rule to prevent clutter:
+ * - very low zoom: hide labels
+ * - medium zoom: only large countries
+ * - higher zoom: progressively include more labels
+ */
+function shouldShowLabel(zoomLevel: number, size: LabelSize): boolean {
+  if (zoomLevel <= 1.5) return false
+  if (zoomLevel <= 2.5) return size === 'large'
+  if (zoomLevel <= 4) return size === 'large' || size === 'medium'
+  return true
+}
+
 export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry, onHoverText, resetSignal }: WorldMapProps) {
   const { ref, size } = useContainerSize()
   const svgRef = useRef<SVGSVGElement | null>(null)
@@ -62,18 +74,20 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
 
   const [zoomLevel, setZoomLevel] = useState(1)
   const [tooltip, setTooltip] = useState<Tooltip>({ x: 0, y: 0, text: '', visible: false })
+  const [retroMode, setRetroMode] = useState(false)
+  const [patrolStep, setPatrolStep] = useState(0)
 
-  // Projection fits GeoJSON into the map viewport for stable responsive rendering.
+  // Projection keeps the full world visible and responsive to panel size.
   const projection = useMemo(
     () => geoMercator().fitSize([size.width, size.height], geoData as GeoPermissibleObjects),
     [geoData, size.width, size.height]
   )
 
-  // geoPath converts country polygons to SVG paths.
+  // geoPath converts country geometry to SVG paths.
   const pathBuilder = useMemo(() => geoPath(projection), [projection])
   const heatMap = useMemo(() => buildHeatMap(conflicts), [conflicts])
 
-  // We reuse projected centroids for conflict lines and label anchors.
+  // Reused projected points for conflict lines, labels, and retro patrol.
   const centroids = useMemo(() => {
     const map = new Map<string, [number, number]>()
 
@@ -87,16 +101,67 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     return map
   }, [geoData, projection])
 
-  const countryLabels = useMemo(() => {
+  const labels = useMemo(() => {
+    const viewportArea = size.width * size.height
+
     return geoData.features
       .map((feature) => {
         const name = getCountryName(feature)
         const point = centroids.get(name)
         if (!point) return null
-        return { name, x: point[0], y: point[1] }
+
+        const bounds = pathBuilder.bounds(feature as GeoPermissibleObjects)
+        const width = Math.max(0, bounds[1][0] - bounds[0][0])
+        const height = Math.max(0, bounds[1][1] - bounds[0][1])
+        const area = width * height
+
+        let labelSize: LabelSize = 'small'
+        if (area > viewportArea * 0.01) labelSize = 'large'
+        else if (area > viewportArea * 0.0035) labelSize = 'medium'
+
+        return { name, x: point[0], y: point[1], size: labelSize }
       })
-      .filter((label): label is { name: string; x: number; y: number } => label !== null)
-  }, [geoData, centroids])
+      .filter((label): label is { name: string; x: number; y: number; size: LabelSize } => label !== null)
+  }, [geoData, centroids, pathBuilder, size.width, size.height])
+
+  const visibleLabels = useMemo(() => labels.filter((label) => shouldShowLabel(zoomLevel, label.size)), [labels, zoomLevel])
+
+  const activeRoutes = useMemo(() => {
+    return conflicts
+      .filter((conflict) => conflict.active !== false)
+      .map((conflict) => {
+        const from = centroids.get(conflict.country)
+        const to = centroids.get(conflict.opponent)
+        if (!from || !to) return null
+        return { from, to }
+      })
+      .filter((route): route is { from: [number, number]; to: [number, number] } => route !== null)
+  }, [conflicts, centroids])
+
+  useEffect(() => {
+    if (!retroMode || activeRoutes.length === 0) return
+
+    const timer = window.setInterval(() => {
+      setPatrolStep((prev) => (prev + 1) % (activeRoutes.length * 22))
+    }, 130)
+
+    return () => window.clearInterval(timer)
+  }, [retroMode, activeRoutes.length])
+
+  const patrolPoint = useMemo(() => {
+    if (!retroMode || activeRoutes.length === 0) return null
+
+    const routeIndex = Math.floor(patrolStep / 22) % activeRoutes.length
+    const progress = (patrolStep % 22) / 21
+    const route = activeRoutes[routeIndex]
+
+    return {
+      x: route.from[0] + (route.to[0] - route.from[0]) * progress,
+      y: route.from[1] + (route.to[1] - route.from[1]) * progress,
+      routeIndex: routeIndex + 1,
+      routeCount: activeRoutes.length
+    }
+  }, [retroMode, activeRoutes, patrolStep])
 
   useEffect(() => {
     if (!svgRef.current || !zoomLayerRef.current) return
@@ -104,7 +169,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     const svg = select(svgRef.current)
     const zoomLayer = select(zoomLayerRef.current)
 
-    // Zoom handler updates SVG transform and zoom state for conditional labels.
+    // Zoom state drives transform and smart label density.
     const behavior = zoom<SVGSVGElement, unknown>()
       .scaleExtent([1, 8])
       .on('zoom', (event) => {
@@ -151,7 +216,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
       })
   }, [geoData, conflicts, selectedCountry, pathBuilder, heatMap, onHoverText, onSelectCountry])
 
-  // Search replacement and map click both focus country bounds automatically.
+  // Country selection from search/map replaces previous target and auto-focuses bounds.
   useEffect(() => {
     if (!selectedCountry || !svgRef.current || !zoomRef.current) return
 
@@ -178,24 +243,34 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
 
   return (
     <section className="panel map-panel" ref={ref}>
+      <button type="button" className={`retro-toggle ${retroMode ? 'active' : ''}`} onClick={() => setRetroMode((v) => !v)}>
+        {retroMode ? '8-bit ON' : '8-bit'}
+      </button>
+
       <svg ref={svgRef} className="world-svg" width={size.width} height={size.height} role="img" aria-label="World conflict map">
         <g ref={zoomLayerRef}>
           <rect className="ocean" width={size.width} height={size.height} />
           <g ref={countriesLayerRef} />
           <ConflictLines conflicts={conflicts} centroids={centroids} onHoverText={onHoverText} />
 
-          {/* Label rendering is gated by zoom to prevent overlap clutter. */}
-          {zoomLevel > LABELS_ZOOM_THRESHOLD && (
+          <g>
+            {visibleLabels.map((label) => (
+              <text key={label.name} x={label.x} y={label.y} className={`country-label ${label.size}`}>
+                {label.name}
+              </text>
+            ))}
+          </g>
+
+          {patrolPoint && (
             <g>
-              {countryLabels.map((label) => (
-                <text key={label.name} x={label.x} y={label.y} className="country-label">
-                  {label.name}
-                </text>
-              ))}
+              <rect x={patrolPoint.x - 3} y={patrolPoint.y - 3} width={6} height={6} className="pixel-drone" />
+              <rect x={patrolPoint.x - 1} y={patrolPoint.y - 8} width={2} height={2} className="pixel-drone" />
             </g>
           )}
         </g>
       </svg>
+
+      {patrolPoint && <div className="retro-status">Patrol {patrolPoint.routeIndex}/{patrolPoint.routeCount}</div>}
 
       {tooltip.visible && (
         <div className="map-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>

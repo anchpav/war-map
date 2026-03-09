@@ -24,12 +24,12 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  background: #081521;
+  background: radial-gradient(circle at 20% 20%, #0b1f32 0, #081521 45%, #060f18 100%);
   color: var(--text);
   font-family: Inter, Arial, sans-serif;
 }
 
-.app-shell {
+.tactical-shell {
   width: min(1420px, 98vw);
   height: 100vh;
   margin: 0 auto;
@@ -42,8 +42,8 @@ body {
 .panel {
   border: 1px solid var(--panel-border);
   border-radius: 8px;
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px rgba(109, 157, 201, 0.08);
+  background: linear-gradient(180deg, rgba(14, 26, 38, 0.96) 0%, rgba(10, 21, 31, 0.95) 100%);
+  box-shadow: inset 0 0 0 1px rgba(124, 168, 207, 0.08), 0 0 12px rgba(6, 13, 21, 0.45);
 }
 
 .header-row {
@@ -54,26 +54,26 @@ body {
   gap: 0.5rem;
 }
 
-.header-row h1 {
+.tactical-header h1 {
   margin: 0;
   font-size: 1rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
-.header-row p {
+.tactical-header p {
   margin: 0.12rem 0 0;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
 .btn-mini {
-  border: 1px solid var(--panel-border);
+  border: 1px solid #3f566f;
   border-radius: 6px;
   background: #142638;
   color: var(--text);
   padding: 0.32rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   cursor: pointer;
 }
 
@@ -83,7 +83,7 @@ body {
 }
 
 .btn-secondary {
-  opacity: 0.85;
+  opacity: 0.82;
 }
 
 .status-row {
@@ -92,8 +92,12 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.tactical-status {
+  border-color: #31465d;
 }
 
 .control-row {
@@ -136,6 +140,7 @@ body {
 
 .metric-card {
   padding: 0.36rem 0.48rem;
+  position: relative;
 }
 
 .metric-card span {
@@ -148,7 +153,12 @@ body {
 .metric-card strong {
   display: block;
   margin-top: 0.08rem;
-  font-size: 1rem;
+  font-size: 1.08rem;
+  letter-spacing: 0.02em;
+}
+
+.metric-card.alert strong {
+  color: #ff8e8e;
 }
 
 .main-grid {
@@ -212,23 +222,37 @@ body {
 }
 
 .country-label {
-  font-size: 7px;
-  fill: #9ab1cf;
+  fill: #a5bcd7;
   text-anchor: middle;
   dominant-baseline: middle;
-  opacity: 0.88;
   pointer-events: none;
+  letter-spacing: 0.04em;
 }
 
-/* Curved tactical conflict routes with subtle moving dash flow. */
+.country-label.large {
+  font-size: 8px;
+  opacity: 0.9;
+}
+
+.country-label.medium {
+  font-size: 7px;
+  opacity: 0.82;
+}
+
+.country-label.small {
+  font-size: 6px;
+  opacity: 0.72;
+}
+
+/* Tactical conflict routes: subtle animated dash + glow. */
 .conflict-line {
   fill: none;
   stroke: var(--conflict);
-  stroke-width: 2.2;
+  stroke-width: 2.3;
   stroke-linecap: round;
   stroke-dasharray: 8 7;
   filter: drop-shadow(0 0 6px var(--conflict));
-  animation: flow 1.3s linear infinite, pulse 2.8s ease-in-out infinite;
+  animation: flow 1.4s linear infinite, pulse 2.8s ease-in-out infinite;
 }
 
 .conflict-line.historical {
@@ -261,6 +285,54 @@ body {
   padding: 3px 7px;
 }
 
+.retro-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  border: 1px solid #3d4f65;
+  border-radius: 5px;
+  background: rgba(8, 18, 29, 0.88);
+  color: #9dd1ff;
+  font-size: 11px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+
+.retro-toggle.active {
+  color: #f5ff97;
+  border-color: #8a9d40;
+}
+
+.retro-status {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 4;
+  border: 1px solid #3d4e5f;
+  border-radius: 5px;
+  background: rgba(5, 14, 24, 0.9);
+  color: #d5e89f;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.pixel-drone {
+  fill: #ebff65;
+  filter: drop-shadow(0 0 3px #f4ff8b);
+  animation: drone-blink 0.7s steps(2, end) infinite;
+}
+
+@keyframes drone-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 .side-column {
   min-height: 0;
   display: grid;
@@ -270,6 +342,10 @@ body {
 
 .side-panel {
   padding: 0.42rem 0.52rem;
+}
+
+.intel-card {
+  border-color: #31465d;
 }
 
 .side-panel h3 {
@@ -320,7 +396,7 @@ body {
     overflow: auto;
   }
 
-  .app-shell {
+  .tactical-shell {
     height: auto;
     min-height: 100vh;
     grid-template-rows: auto;

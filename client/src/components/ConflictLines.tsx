@@ -7,12 +7,12 @@ type ConflictLinesProps = {
 }
 
 /**
- * Draw tactical curved routes between countries.
- * Missing countries are skipped to keep rendering resilient.
+ * Build a smooth tactical route between two projected points.
+ * A quadratic curve keeps drawing simple and lightweight.
  */
 function buildCurvePath(from: [number, number], to: [number, number]): string {
   const controlX = (from[0] + to[0]) / 2
-  const controlY = (from[1] + to[1]) / 2 - 22
+  const controlY = (from[1] + to[1]) / 2 - 24
   return `M ${from[0]} ${from[1]} Q ${controlX} ${controlY} ${to[0]} ${to[1]}`
 }
 
