@@ -4,5 +4,9 @@
   "scripts": {
     "dev:server": "cd server && node index.js",
     "dev:client": "cd client && npm run dev"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "node-fetch": "^3.3.2"
   }
 }

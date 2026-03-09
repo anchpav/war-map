@@ -19,56 +19,38 @@
   },
   {
     "country": "Myanmar",
-    "opponent": "Anti-Junta Forces",
+    "opponent": "Anti-junta resistance groups",
     "start": "2021-02-01",
     "end": null
   },
   {
     "country": "Democratic Republic of Congo",
-    "opponent": "M23 Rebels",
-    "start": "2022-03-23",
+    "opponent": "M23 rebel group",
+    "start": "2021-11-07",
     "end": null
   },
   {
     "country": "Yemen",
-    "opponent": "Houthi Movement",
+    "opponent": "Houthi movement",
     "start": "2014-09-21",
     "end": null
   },
   {
     "country": "Syria",
-    "opponent": "Various Rebel Factions",
+    "opponent": "Various armed opposition groups",
     "start": "2011-03-15",
     "end": null
   },
   {
     "country": "Ethiopia",
-    "opponent": "Regional Armed Groups",
-    "start": "2020-11-04",
+    "opponent": "Amhara and Oromo armed factions",
+    "start": "2022-08-01",
     "end": null
   },
   {
-    "country": "Somalia",
-    "opponent": "Al-Shabaab",
-    "start": "2006-06-05",
-    "end": null
-  },
-  {
-    "country": "Mali",
-    "opponent": "Islamist Insurgents",
-    "start": "2012-01-17",
-    "end": null
-  },
-  {
-    "country": "Burkina Faso",
-    "opponent": "Islamist Insurgents",
-    "start": "2015-04-03",
-    "end": null
-  },
-  {
-    "country": "Niger",
-    "opponent": "Islamist Insurgents",
-    "start": "2015-05-06",
+    "country": "Haiti",
+    "opponent": "Armed gangs",
+    "start": "2021-07-07",
     "end": null
   }
 ]
