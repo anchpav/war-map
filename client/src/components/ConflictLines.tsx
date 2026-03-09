@@ -8,7 +8,7 @@ type ConflictLinesProps = {
 
 /**
  * Build a smooth tactical route between two projected points.
- * A quadratic curve keeps drawing simple and lightweight.
+ * A quadratic curve keeps drawing lightweight and readable.
  */
 function buildCurvePath(from: [number, number], to: [number, number]): string {
   const controlX = (from[0] + to[0]) / 2
@@ -28,14 +28,19 @@ export function ConflictLines({ conflicts, centroids, onHoverText }: ConflictLin
           return null
         }
 
+        const pathData = buildCurvePath(from, to)
+        const stateClass = conflict.active === false ? 'historical' : 'active'
+
         return (
-          <path
-            key={`${conflict.country}-${conflict.opponent}-${index}`}
-            d={buildCurvePath(from, to)}
-            className={`conflict-line ${conflict.active === false ? 'historical' : 'active'}`}
-            onMouseEnter={() => onHoverText(`${conflict.country} vs ${conflict.opponent}`)}
-            onMouseLeave={() => onHoverText('')}
-          />
+          <g key={`${conflict.country}-${conflict.opponent}-${index}`}>
+            <path d={pathData} className={`conflict-line-halo ${stateClass}`} />
+            <path
+              d={pathData}
+              className={`conflict-line ${stateClass}`}
+              onMouseEnter={() => onHoverText(`${conflict.country} vs ${conflict.opponent}`)}
+              onMouseLeave={() => onHoverText('')}
+            />
+          </g>
         )
       })}
     </g>

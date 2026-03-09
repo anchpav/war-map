@@ -145,6 +145,7 @@ export default function App() {
       <header className="panel header-row tactical-header">
         <div>
           <h1>Global War Tracker</h1>
+          <span className="header-tag">Tactical Command Console</span>
           <p>{loading ? 'Tactical feed sync in progress…' : `Command feed online • ${lastUpdated || '—'}`}</p>
         </div>
         <button type="button" className="btn-mini" onClick={loadDashboardData} disabled={loading}>
@@ -204,6 +205,7 @@ export default function App() {
 
           <section className="panel side-panel intel-card">
             <h3>Operations log</h3>
+            <small className="intel-subtitle">Latest confirmed signals</small>
             <ul className="compact-list">
               {recentConflicts.map((conflict, index) => (
                 <li key={`${conflict.country}-${conflict.opponent}-${index}`}>
@@ -216,6 +218,7 @@ export default function App() {
 
           <section className="panel side-panel intel-card">
             <h3>{selectedCountry || 'No target selected'}</h3>
+            <small className="intel-subtitle">Target intelligence</small>
             <p>
               {selectedCountry
                 ? `${selectedCountryConflicts.length} linked conflict${selectedCountryConflicts.length === 1 ? '' : 's'}`

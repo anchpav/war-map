@@ -183,6 +183,12 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     return () => window.clearInterval(timer)
   }, [retroMode, activeRoutes.length])
 
+
+  const selectedPoint = useMemo(() => {
+    if (!selectedCountry) return null
+    return centroids.get(selectedCountry) ?? null
+  }, [selectedCountry, centroids])
+
   const patrolPoint = useMemo(() => {
     if (!retroMode || activeRoutes.length === 0) return null
 
@@ -295,6 +301,13 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
               </text>
             ))}
           </g>
+
+          {selectedPoint && (
+            <g className="target-reticle">
+              <circle cx={selectedPoint[0]} cy={selectedPoint[1]} r={9} className="target-ring" />
+              <circle cx={selectedPoint[0]} cy={selectedPoint[1]} r={3} className="target-core" />
+            </g>
+          )}
 
           {patrolPoint && (
             <g>

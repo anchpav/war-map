@@ -4,7 +4,7 @@ type MetricsPanelProps = {
   metrics: Metrics
 }
 
-/** Tactical telemetry row for fast KPI scanning. */
+/** Tactical telemetry strip: dense and quickly scannable. */
 export function MetricsPanel({ metrics }: MetricsPanelProps) {
   return (
     <section className="metrics-grid">

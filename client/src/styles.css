@@ -67,6 +67,18 @@ body {
   color: var(--text-muted);
 }
 
+.header-tag {
+  display: inline-block;
+  margin-top: 0.18rem;
+  padding: 0.08rem 0.35rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fc3e3;
+  border: 1px solid #3a5674;
+  border-radius: 999px;
+}
+
 .btn-mini {
   border: 1px solid #3f566f;
   border-radius: 6px;
@@ -249,6 +261,14 @@ body {
 }
 
 /* Tactical conflict routes: subtle animated dash + glow. */
+.conflict-line-halo {
+  fill: none;
+  stroke: rgba(255, 77, 77, 0.22);
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
 .conflict-line {
   fill: none;
   stroke: var(--conflict);
@@ -321,10 +341,33 @@ body {
   padding: 2px 6px;
 }
 
+.target-reticle {
+  pointer-events: none;
+}
+
+.target-ring {
+  fill: none;
+  stroke: rgba(56, 189, 248, 0.8);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+  animation: reticle-spin 4s linear infinite;
+}
+
+.target-core {
+  fill: rgba(14, 165, 233, 0.85);
+  filter: drop-shadow(0 0 4px rgba(14, 165, 233, 0.9));
+}
+
 .pixel-drone {
   fill: #ebff65;
   filter: drop-shadow(0 0 3px #f4ff8b);
   animation: drone-blink 0.7s steps(2, end) infinite;
+}
+
+@keyframes reticle-spin {
+  to {
+    stroke-dashoffset: -24;
+  }
 }
 
 @keyframes drone-blink {
@@ -363,6 +406,15 @@ body {
   margin: 0 0 0.25rem;
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.intel-subtitle {
+  display: block;
+  margin: -0.08rem 0 0.3rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7f99b0;
 }
 
 .side-panel ul {
