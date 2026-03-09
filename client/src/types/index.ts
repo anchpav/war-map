@@ -1,19 +1,30 @@
 export type Conflict = {
-  id: string
   country: string
   opponent: string
-  lat: number
-  lon: number
-  opponentLat: number
-  opponentLon: number
-  start: string
-  end: string | null
-  description: string
+  start?: string
+  active?: boolean
 }
 
 export type Metrics = {
   totalConflicts: number
   activeConflicts: number
-  daysWithoutWarWorld: number
-  daysWithoutWarSelected: number
+  countriesAtWar: number
+  globalDaysWithoutWar: number
+  selectedCountryConflicts: number
+  selectedCountryDaysWithoutWar: number
+}
+
+export type CountryFeature = {
+  type: 'Feature'
+  properties?: {
+    ADMIN?: string
+    name?: string
+    [key: string]: unknown
+  }
+  geometry: unknown
+}
+
+export type CountryFeatureCollection = {
+  type: 'FeatureCollection'
+  features: CountryFeature[]
 }

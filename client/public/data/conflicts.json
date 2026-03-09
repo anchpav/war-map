@@ -1,62 +1,7 @@
 [
-  {
-    "id": "russia-ukraine",
-    "country": "Russia",
-    "opponent": "Ukraine",
-    "lat": 55.7558,
-    "lon": 37.6173,
-    "opponentLat": 50.4501,
-    "opponentLon": 30.5234,
-    "start": "2022-02-24",
-    "end": null,
-    "description": "Russia-Ukraine war"
-  },
-  {
-    "id": "israel-palestine",
-    "country": "Israel",
-    "opponent": "Palestine",
-    "lat": 31.7683,
-    "lon": 35.2137,
-    "opponentLat": 31.5,
-    "opponentLon": 34.4667,
-    "start": "2023-10-07",
-    "end": null,
-    "description": "Israel-Palestine conflict"
-  },
-  {
-    "id": "syria-turkey-border",
-    "country": "Syria",
-    "opponent": "Turkey",
-    "lat": 33.5138,
-    "lon": 36.2765,
-    "opponentLat": 39.9334,
-    "opponentLon": 32.8597,
-    "start": "2011-03-15",
-    "end": null,
-    "description": "Cross-border conflict activity"
-  },
-  {
-    "id": "karabakh-2020",
-    "country": "Armenia",
-    "opponent": "Azerbaijan",
-    "lat": 40.1772,
-    "lon": 44.5035,
-    "opponentLat": 40.4093,
-    "opponentLon": 49.8671,
-    "start": "2020-09-27",
-    "end": "2020-11-10",
-    "description": "Nagorno-Karabakh conflict"
-  },
-  {
-    "id": "gulf-war-historical",
-    "country": "Iraq",
-    "opponent": "United States",
-    "lat": 33.3152,
-    "lon": 44.3661,
-    "opponentLat": 38.9072,
-    "opponentLon": -77.0369,
-    "start": "1990-08-02",
-    "end": "1991-02-28",
-    "description": "Gulf War"
-  }
+  {"country": "Russia", "opponent": "Ukraine", "start": "2022-02-24", "active": true},
+  {"country": "Israel", "opponent": "Palestine", "start": "2023-10-07", "active": true},
+  {"country": "Syria", "opponent": "Turkey", "start": "2011-03-15", "active": true},
+  {"country": "Armenia", "opponent": "Azerbaijan", "start": "2020-09-27", "active": false},
+  {"country": "Iraq", "opponent": "United States", "start": "1990-08-02", "active": false}
 ]

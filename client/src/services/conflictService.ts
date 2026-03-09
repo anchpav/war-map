@@ -1,16 +1,25 @@
 import type { Conflict } from '../types'
 
-/** Load conflicts from backend API with clear error messages for UI. */
-export async function fetchConflicts(): Promise<Conflict[]> {
-  const response = await fetch('/api/conflicts')
-  if (!response.ok) {
-    throw new Error('Server is not available. Please start backend on port 3001.')
+/**
+ * Load conflict pairs from backend first.
+ * Fallback to static JSON so the UI still works if backend is down.
+ */
+export async function loadConflicts(): Promise<Conflict[]> {
+  try {
+    const apiResponse = await fetch('/api/conflicts')
+    if (apiResponse.ok) {
+      const apiData = await apiResponse.json()
+      return Array.isArray(apiData) ? apiData : []
+    }
+  } catch {
+    // Ignore API errors and use local static data below.
   }
 
-  const data = await response.json()
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid conflicts format from server.')
+  const staticResponse = await fetch('/data/conflicts.json')
+  if (!staticResponse.ok) {
+    throw new Error('Cannot load conflicts data. Start backend or check /data/conflicts.json.')
   }
 
-  return data
+  const staticData = await staticResponse.json()
+  return Array.isArray(staticData) ? staticData : []
 }

@@ -1,48 +1,59 @@
-# Global War Tracker (Minimal MVP)
+# Global War Tracker
 
-A beginner-friendly MVP with:
+Minimal React + Vite + D3 conflict map with a lightweight Express API.
 
-- **React + Vite + D3** frontend
-- **Express** backend
-- Local `GeoJSON` world map and local conflict dataset
+## What was cleaned up
+
+- Removed legacy static frontend entry files (single entrypoint only).
+- Frontend now boots only from `client/src/main.tsx` via `client/index.html`.
+- Moved data loading to small service modules:
+  - `client/src/services/conflictService.ts`
+  - `client/src/services/geoService.ts`
+- Optimized map rendering to use only `d3-geo`, `d3-selection`, `d3-zoom`.
+- Kept project architecture simple: one frontend, one backend, local JSON data.
 
 ## Project structure
 
 ```text
-client/
-  src/
-    components/
-      WorldMap.tsx
-      ConflictLines.tsx
-      CountrySearch.tsx
-      MetricsPanel.tsx
-    services/
-      conflictService.ts
-      geoService.ts
-    types/
-      index.ts
-    App.tsx
-    main.tsx
-  public/
-    data/
-      conflicts.json
-      world.geo.json
-
-server/
-  index.js
+war-map/
+├ client/
+│  ├ index.html
+│  ├ package.json
+│  ├ vite.config.ts
+│  ├ tsconfig.json
+│  ├ public/data/
+│  │  ├ conflicts.json
+│  │  └ world.geo.json
+│  └ src/
+│     ├ main.tsx
+│     ├ App.tsx
+│     ├ styles.css
+│     ├ types/index.ts
+│     ├ services/
+│     │  ├ conflictService.ts
+│     │  └ geoService.ts
+│     └ components/
+│        ├ WorldMap.tsx
+│        ├ ConflictLines.tsx
+│        ├ CountrySearch.tsx
+│        └ MetricsPanel.tsx
+├ server/
+│  ├ index.js
+│  └ package.json
+├ scripts/
+│  └ updateConflicts.py
+├ run.ps1
+└ package.json
 ```
 
-## Install
+## Run locally
 
 ### Backend
 
 ```bash
 cd server
-npm install
 node index.js
 ```
-
-Backend runs at `http://localhost:3001`.
 
 ### Frontend
 
@@ -52,21 +63,11 @@ npm install
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173`.
+UI: `http://localhost:5173`
 
-## API
+## Notes
 
-- `GET /api/conflicts` - reads and returns `client/public/data/conflicts.json`
-
-## Features
-
-- SVG world map rendered from `world.geo.json` using `d3.geoMercator`
-- Country hover + click selection
-- Country search with autocomplete
-- Animated dashed conflict lines
-- Metrics:
-  - total conflicts
-  - active conflicts
-  - days without war (world)
-  - days without war (selected country)
-- Friendly error messages when server/data is unavailable
+- `WorldMap.tsx` memoizes heavy projection/path work for stable performance.
+- Country labels are rendered only when zoom level is above `2`.
+- Conflict lines are curved SVG paths with CSS dash animation (lightweight strategy-map style).
+- Data is loaded once on startup (`/api/conflicts` with fallback to `/data/conflicts.json`).
