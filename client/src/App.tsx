@@ -137,7 +137,7 @@ export default function App() {
     return [...visibleConflicts]
       .filter((conflict) => Boolean(conflict.start))
       .sort((a, b) => String(b.start).localeCompare(String(a.start)))
-      .slice(0, 4)
+      .slice(0, 3)
   }, [visibleConflicts])
 
   return (
@@ -154,15 +154,13 @@ export default function App() {
 
       <section className="panel status-row tactical-status">
         <span>{selectedCountry ? `Target: ${selectedCountry}` : 'Target: Global overview'}</span>
-        <button type="button" className="btn-mini btn-secondary" title="Reset map view (R)" onClick={() => setResetMapSignal((v) => v + 1)}>
-          Reset view
-        </button>
+        <small>R to reset map view</small>
       </section>
 
       <section className="control-row">
         <CountrySearch countries={countries} selectedCountry={selectedCountry} onSelectCountry={setSelectedCountry} />
         <section className="panel timeline-panel">
-          <label htmlFor="timeline-year">Timeline year: {timelineYear}</label>
+          <label htmlFor="timeline-year">Year {timelineYear}</label>
           <input
             id="timeline-year"
             type="range"
@@ -225,7 +223,7 @@ export default function App() {
             </p>
             {selectedCountry && (
               <ul className="compact-list">
-                {selectedCountryConflicts.slice(0, 4).map((conflict, index) => {
+                {selectedCountryConflicts.slice(0, 3).map((conflict, index) => {
                   const opponent = conflict.country === selectedCountry ? conflict.opponent : conflict.country
                   return <li key={`${opponent}-${index}`}>{opponent}</li>
                 })}
