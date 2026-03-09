@@ -33,7 +33,7 @@ function useContainerSize() {
 
       setSize({
         width: Math.max(320, entry.contentRect.width),
-        height: Math.max(420, entry.contentRect.width * 0.56)
+        height: Math.max(360, entry.contentRect.width * 0.5)
       })
     })
 
@@ -63,17 +63,17 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
   const [zoomLevel, setZoomLevel] = useState(1)
   const [tooltip, setTooltip] = useState<Tooltip>({ x: 0, y: 0, text: '', visible: false })
 
-  // Projection uses fitSize so the full world map always fits the SVG container.
+  // Projection fits GeoJSON into the map viewport for stable responsive rendering.
   const projection = useMemo(
     () => geoMercator().fitSize([size.width, size.height], geoData as GeoPermissibleObjects),
     [geoData, size.width, size.height]
   )
 
-  // geoPath converts GeoJSON polygons into SVG path strings.
+  // geoPath converts country polygons to SVG paths.
   const pathBuilder = useMemo(() => geoPath(projection), [projection])
   const heatMap = useMemo(() => buildHeatMap(conflicts), [conflicts])
 
-  // We compute projected centroids once and reuse them for lines + labels.
+  // We reuse projected centroids for conflict lines and label anchors.
   const centroids = useMemo(() => {
     const map = new Map<string, [number, number]>()
 
@@ -87,7 +87,6 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     return map
   }, [geoData, projection])
 
-  // Lightweight label model: only used when zoom is high enough.
   const countryLabels = useMemo(() => {
     return geoData.features
       .map((feature) => {
@@ -105,7 +104,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     const svg = select(svgRef.current)
     const zoomLayer = select(zoomLayerRef.current)
 
-    // We keep zoom state in React to control label visibility and map UX.
+    // Zoom handler updates SVG transform and zoom state for conditional labels.
     const behavior = zoom<SVGSVGElement, unknown>()
       .scaleExtent([1, 8])
       .on('zoom', (event) => {
@@ -152,7 +151,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
       })
   }, [geoData, conflicts, selectedCountry, pathBuilder, heatMap, onHoverText, onSelectCountry])
 
-  // Searching or clicking a country zooms map to that country's geometry bounds.
+  // Search replacement and map click both focus country bounds automatically.
   useEffect(() => {
     if (!selectedCountry || !svgRef.current || !zoomRef.current) return
 
@@ -185,7 +184,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
           <g ref={countriesLayerRef} />
           <ConflictLines conflicts={conflicts} centroids={centroids} onHoverText={onHoverText} />
 
-          {/* Labels are only rendered when zoom is high to avoid overlap noise. */}
+          {/* Label rendering is gated by zoom to prevent overlap clutter. */}
           {zoomLevel > LABELS_ZOOM_THRESHOLD && (
             <g>
               {countryLabels.map((label) => (

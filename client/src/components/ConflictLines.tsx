@@ -7,12 +7,12 @@ type ConflictLinesProps = {
 }
 
 /**
- * Draw curved SVG paths between country centroids.
- * A quadratic curve keeps the implementation lightweight and readable.
+ * Draw tactical curved routes between countries.
+ * Missing countries are skipped to keep rendering resilient.
  */
 function buildCurvePath(from: [number, number], to: [number, number]): string {
   const controlX = (from[0] + to[0]) / 2
-  const controlY = (from[1] + to[1]) / 2 - 24
+  const controlY = (from[1] + to[1]) / 2 - 22
   return `M ${from[0]} ${from[1]} Q ${controlX} ${controlY} ${to[0]} ${to[1]}`
 }
 

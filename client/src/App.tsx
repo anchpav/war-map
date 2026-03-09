@@ -25,7 +25,7 @@ function daysWithoutWar(conflicts: Conflict[]): number {
   return latest ? daysSince(latest) : 0
 }
 
-/** Build small dashboard metrics from current filtered conflicts. */
+/** Build compact dashboard metrics from current timeline/country scope. */
 function buildMetrics(allConflicts: Conflict[], visibleConflicts: Conflict[], selectedCountry: string): Metrics {
   const activeConflicts = visibleConflicts.filter((conflict) => conflict.active).length
 
@@ -58,7 +58,7 @@ export default function App() {
   const [resetMapSignal, setResetMapSignal] = useState(0)
   const [lastUpdated, setLastUpdated] = useState('')
 
-  // Load all app data in one place to keep refresh behavior consistent.
+  // Shared loader for startup + refresh button.
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true)
@@ -79,7 +79,7 @@ export default function App() {
     loadDashboardData()
   }, [loadDashboardData])
 
-  // Keyboard shortcuts: focus search, close country panel, reset map zoom.
+  // Keyboard shortcuts kept lightweight: search focus, clear selection, reset map.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key.toLowerCase() === 'f') {
@@ -139,55 +139,49 @@ export default function App() {
     return [...visibleConflicts]
       .filter((conflict) => Boolean(conflict.start))
       .sort((a, b) => String(b.start).localeCompare(String(a.start)))
-      .slice(0, 6)
+      .slice(0, 4)
   }, [visibleConflicts])
 
   return (
     <main className="app-shell">
-      <header className="header panel">
+      <header className="panel header-row">
         <div>
           <h1>Global War Tracker</h1>
-          <p>Interactive geopolitical conflict dashboard powered by React + D3.</p>
+          <p>{loading ? 'Syncing live data...' : `Operational • Updated ${lastUpdated || '—'}`}</p>
         </div>
-
-        <div className="header-actions">
-          <button type="button" onClick={loadDashboardData} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh data'}
-          </button>
-          <button type="button" onClick={() => setResetMapSignal((value) => value + 1)}>
-            Reset map
-          </button>
-          <button type="button" onClick={() => setSelectedCountry('')}>
-            Clear country
-          </button>
-        </div>
+        <button type="button" className="btn-mini" onClick={loadDashboardData} disabled={loading}>
+          {loading ? 'Sync…' : 'Refresh'}
+        </button>
       </header>
 
-      <section className="panel status-panel">
-        <span>{loading ? 'Loading data…' : 'Data ready'}</span>
-        <span>Last update: {lastUpdated || '—'}</span>
+      <section className="panel status-row">
+        <span>{selectedCountry ? `Focused country: ${selectedCountry}` : 'Focused country: Global overview'}</span>
+        <button type="button" className="btn-mini btn-secondary" title="Reset map view (R)" onClick={() => setResetMapSignal((v) => v + 1)}>
+          Reset view
+        </button>
       </section>
 
-      <CountrySearch countries={countries} selectedCountry={selectedCountry} onSelectCountry={setSelectedCountry} />
-
-      <section className="panel timeline-panel">
-        <label htmlFor="timeline-year">Timeline year: {timelineYear}</label>
-        <input
-          id="timeline-year"
-          type="range"
-          min={START_YEAR}
-          max={new Date().getFullYear()}
-          value={timelineYear}
-          onChange={(event) => setTimelineYear(Number(event.target.value))}
-        />
+      <section className="control-row">
+        <CountrySearch countries={countries} selectedCountry={selectedCountry} onSelectCountry={setSelectedCountry} />
+        <section className="panel timeline-panel">
+          <label htmlFor="timeline-year">Timeline year: {timelineYear}</label>
+          <input
+            id="timeline-year"
+            type="range"
+            min={START_YEAR}
+            max={new Date().getFullYear()}
+            value={timelineYear}
+            onChange={(event) => setTimelineYear(Number(event.target.value))}
+          />
+        </section>
       </section>
 
       <MetricsPanel metrics={metrics} />
 
-      {error && <section className="panel error">{error}</section>}
+      <section className="main-grid">
+        <section className="map-stack">
+          {error && <section className="panel error">{error}</section>}
 
-      <section className="layout-grid">
-        <section>
           {geoData && !error && (
             <WorldMap
               geoData={geoData}
@@ -198,46 +192,48 @@ export default function App() {
               resetSignal={resetMapSignal}
             />
           )}
-          <footer className="panel footer-panel">{hoverText || 'Hover countries and lines for details.'}</footer>
+
+          <footer className="panel footer-panel">{hoverText || 'F: focus search • ESC: clear country • R: reset map'}</footer>
         </section>
 
         <aside className="side-column">
-          <section className="panel">
+          <section className="panel side-panel">
             <h3>Legend</h3>
-            <ul>
-              <li>Land brightness = conflict heat intensity.</li>
-              <li>Red moving curves = conflict flows.</li>
-              <li>Hover country = quick tooltip.</li>
+            <ul className="compact-list">
+              <li>Land brightness = conflict intensity</li>
+              <li>Red curves = conflict routes</li>
+              <li>Hover = country tooltip</li>
             </ul>
           </section>
 
-          <section className="panel">
+          <section className="panel side-panel">
             <h3>Recent conflicts</h3>
             <ul className="compact-list">
               {recentConflicts.map((conflict, index) => (
                 <li key={`${conflict.country}-${conflict.opponent}-${index}`}>
-                  <strong>{conflict.country}</strong> vs {conflict.opponent} ({conflict.start || 'Unknown'})
+                  <strong>{conflict.country}</strong> vs {conflict.opponent}
+                  <small>{conflict.start || 'Unknown'}</small>
                 </li>
               ))}
             </ul>
           </section>
 
-          {selectedCountry && (
-            <section className="panel">
-              <h3>{selectedCountry}</h3>
-              <p>Conflicts involving this country:</p>
+          <section className="panel side-panel">
+            <h3>{selectedCountry || 'No country selected'}</h3>
+            <p>
+              {selectedCountry
+                ? `${selectedCountryConflicts.length} linked conflict${selectedCountryConflicts.length === 1 ? '' : 's'}`
+                : 'Select country from search or map'}
+            </p>
+            {selectedCountry && (
               <ul className="compact-list">
-                {selectedCountryConflicts.map((conflict, index) => {
+                {selectedCountryConflicts.slice(0, 4).map((conflict, index) => {
                   const opponent = conflict.country === selectedCountry ? conflict.opponent : conflict.country
-                  return (
-                    <li key={`${opponent}-${index}`}>
-                      {selectedCountry} — {opponent}
-                    </li>
-                  )
+                  return <li key={`${opponent}-${index}`}>{opponent}</li>
                 })}
               </ul>
-            </section>
-          )}
+            )}
+          </section>
         </aside>
       </section>
     </main>
