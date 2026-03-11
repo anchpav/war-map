@@ -1,7 +1,7 @@
 import { geoCentroid, geoMercator, geoPath, type GeoPermissibleObjects } from 'd3-geo'
 import { select } from 'd3-selection'
 import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from 'd3-zoom'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Conflict, CountryFeatureCollection } from '../types'
 import { getCountryName } from '../services/geoService'
 import { ConflictLines } from './ConflictLines'
@@ -116,6 +116,11 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
   const pathBuilder = useMemo(() => geoPath(projection), [projection])
   const heatMap = useMemo(() => buildHeatMap(conflicts), [conflicts])
 
+  // World geometry bounds in projected space; used to clamp map movement.
+  const worldBounds = useMemo(() => {
+    return pathBuilder.bounds(geoData as GeoPermissibleObjects)
+  }, [pathBuilder, geoData])
+
   // Conflict-country set is memoized for label visibility priority and performance.
   const conflictCountries = useMemo(() => {
     const set = new Set<string>()
@@ -219,6 +224,51 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     }
   }, [retroMode, activeRoutes, patrolStep])
 
+  const clampTransform = useCallback(
+    (transform: ZoomTransform): ZoomTransform => {
+      const [[x0, y0], [x1, y1]] = worldBounds
+      const scaledMinX = x0 * transform.k
+      const scaledMaxX = x1 * transform.k
+      const scaledMinY = y0 * transform.k
+      const scaledMaxY = y1 * transform.k
+
+      const spanX = scaledMaxX - scaledMinX
+      const spanY = scaledMaxY - scaledMinY
+
+      let tx = transform.x
+      let ty = transform.y
+
+      if (spanX <= size.width) {
+        tx = size.width / 2 - (scaledMinX + scaledMaxX) / 2
+      } else {
+        const minTx = size.width - scaledMaxX
+        const maxTx = -scaledMinX
+        tx = Math.max(minTx, Math.min(maxTx, tx))
+      }
+
+      if (spanY <= size.height) {
+        ty = size.height / 2 - (scaledMinY + scaledMaxY) / 2
+      } else {
+        const minTy = size.height - scaledMaxY
+        const maxTy = -scaledMinY
+        ty = Math.max(minTy, Math.min(maxTy, ty))
+      }
+
+      return zoomIdentity.translate(tx, ty).scale(transform.k)
+    },
+    [worldBounds, size.width, size.height]
+  )
+
+  const applyTransform = useCallback(
+    (rawTransform: ZoomTransform) => {
+      if (!svgRef.current || !zoomRef.current) return
+      const bounded = clampTransform(rawTransform)
+      zoomTransformRef.current = bounded
+      select(svgRef.current).call(zoomRef.current.transform as any, bounded)
+    },
+    [clampTransform]
+  )
+
   useEffect(() => {
     if (!svgRef.current || !zoomLayerRef.current) return
 
@@ -231,14 +281,24 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
       // Tactical navigation: keep wheel zoom, disable drag-based pan.
       .filter((event: any) => event.type === 'wheel')
       .on('zoom', (event) => {
-        zoomLayer.attr('transform', event.transform)
-        zoomTransformRef.current = event.transform
-        setZoomLevel(event.transform.k)
+        const bounded = clampTransform(event.transform)
+
+        if (Math.abs(bounded.x - event.transform.x) > 0.01 || Math.abs(bounded.y - event.transform.y) > 0.01) {
+          svg.call(behavior.transform as any, bounded)
+          return
+        }
+
+        zoomLayer.attr('transform', bounded)
+        zoomTransformRef.current = bounded
+        setZoomLevel(bounded.k)
       })
 
     zoomRef.current = behavior
     svg.call(behavior)
-  }, [])
+
+    // Re-clamp after size/projection updates so bounds remain sealed.
+    applyTransform(zoomTransformRef.current)
+  }, [clampTransform, applyTransform])
 
   useEffect(() => {
     if (!countriesLayerRef.current) return
@@ -300,17 +360,14 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     const ty = size.height / 2 - scale * y
 
     autoZoomedCountryRef.current = selectedCountry
-    const nextTransform = zoomIdentity.translate(tx, ty).scale(scale)
-    zoomTransformRef.current = nextTransform
-    select(svgRef.current).call(zoomRef.current.transform as any, nextTransform)
-  }, [selectedCountry, geoData, pathBuilder, size.width, size.height])
+    applyTransform(zoomIdentity.translate(tx, ty).scale(scale))
+  }, [selectedCountry, geoData, pathBuilder, size.width, size.height, applyTransform])
 
   useEffect(() => {
     if (!svgRef.current || !zoomRef.current) return
     autoZoomedCountryRef.current = ''
-    zoomTransformRef.current = zoomIdentity
-    select(svgRef.current).call(zoomRef.current.transform as any, zoomIdentity)
-  }, [resetSignal])
+    applyTransform(zoomIdentity)
+  }, [resetSignal, applyTransform])
 
   useEffect(() => {
     if (!svgRef.current || !zoomRef.current) return
@@ -345,7 +402,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
           .translate(start.x + (targetTransform.x - start.x) * eased, start.y + (targetTransform.y - start.y) * eased)
           .scale(current.k)
 
-        select(svgNode).call(zoomRef.current!.transform as any, stepTransform)
+        applyTransform(stepTransform)
         if (t < 1) requestAnimationFrame(animate)
       }
 
@@ -354,7 +411,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
 
     svgNode.addEventListener('click', onSvgClick)
     return () => svgNode.removeEventListener('click', onSvgClick)
-  }, [size.width, size.height])
+  }, [size.width, size.height, applyTransform])
 
   return (
     <section className="panel map-panel" ref={ref}>
@@ -363,14 +420,19 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
       </button>
 
       <svg ref={svgRef} className="world-svg" width={size.width} height={size.height} role="img" aria-label="World conflict map">
+        <rect className="ocean" width={size.width} height={size.height} />
         <g ref={zoomLayerRef}>
-          <rect className="ocean" width={size.width} height={size.height} />
           <g ref={countriesLayerRef} />
           <ConflictLines conflicts={conflicts} centroids={centroids} onHoverText={onHoverText} />
 
           <g>
             {visibleLabels.map((label) => (
-              <text key={label.name} x={label.x} y={label.y} className={`country-label ${label.isConflict ? 'conflict-label' : 'non-conflict-label'} ${label.isSelected ? 'selected-label' : ''}`}>
+              <text
+                key={label.name}
+                x={label.x}
+                y={label.y}
+                className={`country-label ${label.isConflict ? 'conflict-label' : 'non-conflict-label'} ${label.isSelected ? 'selected-label' : ''}`}
+              >
                 {label.name}
               </text>
             ))}
