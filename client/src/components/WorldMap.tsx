@@ -1,6 +1,6 @@
 import { geoCentroid, geoMercator, geoPath, type GeoPermissibleObjects } from 'd3-geo'
 import { select } from 'd3-selection'
-import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom'
+import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from 'd3-zoom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Conflict, CountryFeatureCollection } from '../types'
 import { getCountryName } from '../services/geoService'
@@ -17,14 +17,13 @@ type WorldMapProps = {
 
 type Size = { width: number; height: number }
 type Tooltip = { x: number; y: number; text: string; visible: boolean }
-type LabelSize = 'large' | 'medium' | 'small'
-
 type CountryLabel = {
   name: string
   x: number
   y: number
-  size: LabelSize
   area: number
+  isConflict: boolean
+  isSelected: boolean
 }
 
 function useContainerSize() {
@@ -53,28 +52,31 @@ function useContainerSize() {
 
 function buildHeatMap(conflicts: Conflict[]) {
   const heat = new Map<string, number>()
-
   conflicts.forEach((conflict) => {
     heat.set(conflict.country, (heat.get(conflict.country) ?? 0) + 1)
-
-    const opponentType = (conflict as any).opponentType
-    if (!opponentType || opponentType === 'state') {
-      heat.set(conflict.opponent, (heat.get(conflict.opponent) ?? 0) + 1)
-    }
+    heat.set(conflict.opponent, (heat.get(conflict.opponent) ?? 0) + 1)
   })
-
   return heat
 }
 
-function shouldShowLabel(zoomLevel: number, size: LabelSize): boolean {
-  if (zoomLevel <= 1.3) return false
-  if (zoomLevel <= 2.4) return size === 'large'
-  if (zoomLevel <= 4) return size === 'large' || size === 'medium'
+/**
+ * Smart label rule:
+ * - low zoom: hide all labels
+ * - medium zoom: only conflict-country labels
+ * - high zoom: conflict labels + faint non-conflict labels
+ */
+function shouldShowLabel(zoomLevel: number, isConflict: boolean): boolean {
+  if (zoomLevel <= 1.8) return false
+  if (zoomLevel <= 3.4) return isConflict
   return true
 }
 
+/**
+ * Keep labels readable by dropping nearby collisions.
+ * Conflict and selected-country labels are prioritized first.
+ */
 function filterLabelOverlap(labels: CountryLabel[], zoomLevel: number): CountryLabel[] {
-  const minDistance = zoomLevel <= 2.5 ? 26 : zoomLevel <= 4 ? 18 : 10
+  const minDistance = zoomLevel <= 3.4 ? 26 : 18
   const accepted: CountryLabel[] = []
 
   for (const label of labels) {
@@ -90,48 +92,41 @@ function filterLabelOverlap(labels: CountryLabel[], zoomLevel: number): CountryL
   return accepted
 }
 
-export function WorldMap({
-  geoData,
-  conflicts,
-  selectedCountry,
-  onSelectCountry,
-  onHoverText,
-  resetSignal
-}: WorldMapProps) {
+export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry, onHoverText, resetSignal }: WorldMapProps) {
   const { ref, size } = useContainerSize()
   const svgRef = useRef<SVGSVGElement | null>(null)
   const zoomLayerRef = useRef<SVGGElement | null>(null)
   const countriesLayerRef = useRef<SVGGElement | null>(null)
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+  const autoZoomedCountryRef = useRef('')
+  const zoomTransformRef = useRef<ZoomTransform>(zoomIdentity)
 
   const [zoomLevel, setZoomLevel] = useState(1)
   const [tooltip, setTooltip] = useState<Tooltip>({ x: 0, y: 0, text: '', visible: false })
   const [retroMode, setRetroMode] = useState(false)
   const [patrolStep, setPatrolStep] = useState(0)
 
+  // Projection keeps the full world visible and responsive to panel size.
   const projection = useMemo(
     () => geoMercator().fitSize([size.width, size.height], geoData as GeoPermissibleObjects),
     [geoData, size.width, size.height]
   )
 
+  // geoPath converts country geometry to SVG paths.
   const pathBuilder = useMemo(() => geoPath(projection), [projection])
   const heatMap = useMemo(() => buildHeatMap(conflicts), [conflicts])
 
+  // Conflict-country set is memoized for label visibility priority and performance.
   const conflictCountries = useMemo(() => {
     const set = new Set<string>()
-
     conflicts.forEach((conflict) => {
-      if (conflict.country) set.add(conflict.country)
-
-      const opponentType = (conflict as any).opponentType
-      if (conflict.opponent && (!opponentType || opponentType === 'state')) {
-        set.add(conflict.opponent)
-      }
+      set.add(conflict.country)
+      set.add(conflict.opponent)
     })
-
     return set
   }, [conflicts])
 
+  // Reused projected points for conflict lines, labels, and retro patrol.
   const centroids = useMemo(() => {
     const map = new Map<string, [number, number]>()
 
@@ -146,8 +141,6 @@ export function WorldMap({
   }, [geoData, projection])
 
   const labels = useMemo(() => {
-    const viewportArea = size.width * size.height
-
     return geoData.features
       .map((feature) => {
         const name = getCountryName(feature)
@@ -159,35 +152,38 @@ export function WorldMap({
         const height = Math.max(0, bounds[1][1] - bounds[0][1])
         const area = width * height
 
-        let labelSize: LabelSize = 'small'
-        if (area > viewportArea * 0.01) labelSize = 'large'
-        else if (area > viewportArea * 0.0035) labelSize = 'medium'
-
-        return { name, x: point[0], y: point[1], size: labelSize, area }
+        return {
+          name,
+          x: point[0],
+          y: point[1],
+          area,
+          isConflict: conflictCountries.has(name),
+          isSelected: selectedCountry === name
+        }
       })
       .filter((label): label is CountryLabel => label !== null)
-  }, [geoData, centroids, pathBuilder, size.width, size.height])
+  }, [geoData, centroids, pathBuilder, size.width, size.height, conflictCountries, selectedCountry])
 
   const visibleLabels = useMemo(() => {
     const allowed = labels
-      .filter((label) => conflictCountries.has(label.name))
-      .filter((label) => shouldShowLabel(zoomLevel, label.size))
-      .sort((a, b) => b.area - a.area)
+      .filter((label) => shouldShowLabel(zoomLevel, label.isConflict))
+      .sort((a, b) => {
+        const aPriority = (a.isSelected ? 4 : 0) + (a.isConflict ? 2 : 0)
+        const bPriority = (b.isSelected ? 4 : 0) + (b.isConflict ? 2 : 0)
+        if (aPriority !== bPriority) return bPriority - aPriority
+        return b.area - a.area
+      })
 
     return filterLabelOverlap(allowed, zoomLevel)
-  }, [labels, zoomLevel, conflictCountries])
+  }, [labels, zoomLevel])
 
   const activeRoutes = useMemo(() => {
     return conflicts
       .filter((conflict) => conflict.active !== false)
       .map((conflict) => {
-        const opponentType = (conflict as any).opponentType
-        if (opponentType && opponentType !== 'state') return null
-
         const from = centroids.get(conflict.country)
         const to = centroids.get(conflict.opponent)
         if (!from || !to) return null
-
         return { from, to }
       })
       .filter((route): route is { from: [number, number]; to: [number, number] } => route !== null)
@@ -229,15 +225,14 @@ export function WorldMap({
     const svg = select(svgRef.current)
     const zoomLayer = select(zoomLayerRef.current)
 
+    // Zoom state drives transform and smart label density.
     const behavior = zoom<SVGSVGElement, unknown>()
       .scaleExtent([1, 8])
-      .filter((event: any) => {
-        // Оставляем только zoom колесом.
-        // Drag-pan отключаем полностью.
-        return event.type === 'wheel'
-      })
+      // Tactical navigation: keep wheel zoom, disable drag-based pan.
+      .filter((event: any) => event.type === 'wheel')
       .on('zoom', (event) => {
         zoomLayer.attr('transform', event.transform)
+        zoomTransformRef.current = event.transform
         setZoomLevel(event.transform.k)
       })
 
@@ -256,7 +251,7 @@ export function WorldMap({
       .join('path')
       .attr('class', (feature: any) => {
         const name = getCountryName(feature)
-        const isConflict = conflictCountries.has(name)
+        const isConflict = conflicts.some((c) => c.country === name || c.opponent === name)
         const isSelected = selectedCountry === name
         const count = heatMap.get(name) ?? 0
         const heatClass = count >= 3 ? 'heat-3' : count >= 1 ? 'heat-1' : ''
@@ -278,10 +273,18 @@ export function WorldMap({
       .on('click', (_event: MouseEvent, feature: any) => {
         onSelectCountry(getCountryName(feature))
       })
-  }, [geoData, conflictCountries, selectedCountry, pathBuilder, heatMap, onHoverText, onSelectCountry])
+  }, [geoData, conflicts, selectedCountry, pathBuilder, heatMap, onHoverText, onSelectCountry])
 
+  // Auto-zoom exactly once per newly selected country, then stay stable.
+  // This prevents repeated repositioning during unrelated re-renders.
   useEffect(() => {
-    if (!selectedCountry || !svgRef.current || !zoomRef.current) return
+    if (!selectedCountry) {
+      autoZoomedCountryRef.current = ''
+      return
+    }
+
+    if (!svgRef.current || !zoomRef.current) return
+    if (autoZoomedCountryRef.current === selectedCountry) return
 
     const target = geoData.features.find((feature) => getCountryName(feature) === selectedCountry)
     if (!target) return
@@ -296,44 +299,78 @@ export function WorldMap({
     const tx = size.width / 2 - scale * x
     const ty = size.height / 2 - scale * y
 
-    select(svgRef.current)
-      .transition()
-      .duration(500)
-      .call(zoomRef.current.transform as any, zoomIdentity.translate(tx, ty).scale(scale))
+    autoZoomedCountryRef.current = selectedCountry
+    const nextTransform = zoomIdentity.translate(tx, ty).scale(scale)
+    zoomTransformRef.current = nextTransform
+    select(svgRef.current).call(zoomRef.current.transform as any, nextTransform)
   }, [selectedCountry, geoData, pathBuilder, size.width, size.height])
 
   useEffect(() => {
     if (!svgRef.current || !zoomRef.current) return
+    autoZoomedCountryRef.current = ''
+    zoomTransformRef.current = zoomIdentity
     select(svgRef.current).call(zoomRef.current.transform as any, zoomIdentity)
   }, [resetSignal])
 
+  useEffect(() => {
+    if (!svgRef.current || !zoomRef.current) return
+
+    const svgNode = svgRef.current
+
+    // Click-to-center navigation (no drag panning):
+    // convert screen click into world coordinates, then recenter at current zoom scale.
+    const onSvgClick = (event: MouseEvent) => {
+      const target = event.target as Element | null
+      if (target?.closest('.country-shape')) return
+
+      const rect = svgNode.getBoundingClientRect()
+      const clickX = event.clientX - rect.left
+      const clickY = event.clientY - rect.top
+      const current = zoomTransformRef.current
+
+      const worldX = (clickX - current.x) / current.k
+      const worldY = (clickY - current.y) / current.k
+      const tx = size.width / 2 - current.k * worldX
+      const ty = size.height / 2 - current.k * worldY
+
+      const start = zoomTransformRef.current
+      const targetTransform = zoomIdentity.translate(tx, ty).scale(current.k)
+      const startTime = performance.now()
+      const duration = 500
+
+      const animate = (now: number) => {
+        const t = Math.min(1, (now - startTime) / duration)
+        const eased = 1 - Math.pow(1 - t, 3)
+        const stepTransform = zoomIdentity
+          .translate(start.x + (targetTransform.x - start.x) * eased, start.y + (targetTransform.y - start.y) * eased)
+          .scale(current.k)
+
+        select(svgNode).call(zoomRef.current!.transform as any, stepTransform)
+        if (t < 1) requestAnimationFrame(animate)
+      }
+
+      requestAnimationFrame(animate)
+    }
+
+    svgNode.addEventListener('click', onSvgClick)
+    return () => svgNode.removeEventListener('click', onSvgClick)
+  }, [size.width, size.height])
+
   return (
     <section className="panel map-panel" ref={ref}>
-      <button
-        type="button"
-        className={`retro-toggle ${retroMode ? 'active' : ''}`}
-        onClick={() => setRetroMode((v) => !v)}
-      >
+      <button type="button" className={`retro-toggle ${retroMode ? 'active' : ''}`} onClick={() => setRetroMode((v) => !v)}>
         {retroMode ? '8-bit ON' : '8-bit'}
       </button>
 
-      <svg
-        ref={svgRef}
-        className="world-svg"
-        width={size.width}
-        height={size.height}
-        role="img"
-        aria-label="World conflict map"
-      >
-        <rect className="ocean" width={size.width} height={size.height} />
-
+      <svg ref={svgRef} className="world-svg" width={size.width} height={size.height} role="img" aria-label="World conflict map">
         <g ref={zoomLayerRef}>
+          <rect className="ocean" width={size.width} height={size.height} />
           <g ref={countriesLayerRef} />
           <ConflictLines conflicts={conflicts} centroids={centroids} onHoverText={onHoverText} />
 
           <g>
             {visibleLabels.map((label) => (
-              <text key={label.name} x={label.x} y={label.y} className={`country-label ${label.size}`}>
+              <text key={label.name} x={label.x} y={label.y} className={`country-label ${label.isConflict ? 'conflict-label' : 'non-conflict-label'} ${label.isSelected ? 'selected-label' : ''}`}>
                 {label.name}
               </text>
             ))}

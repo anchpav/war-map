@@ -199,10 +199,9 @@ body {
 }
 
 .world-svg {
-  display: block;
   width: 100%;
   height: 100%;
-  user-select: none;
+  display: block;
 }
 
 .ocean {
@@ -214,7 +213,7 @@ body {
   stroke: var(--border);
   stroke-width: 0.65;
   cursor: pointer;
-  transition: fill 0.16s ease, stroke 0.16s ease, opacity 0.16s ease;
+  transition: fill 0.16s ease;
 }
 
 .country:hover {
@@ -225,6 +224,7 @@ body {
   fill: var(--selected);
 }
 
+/* Heatmap levels for conflict participation. */
 .country.heat-1 {
   fill: #3c526f;
 }
@@ -238,27 +238,31 @@ body {
 }
 
 .country-label {
+  font-size: 9px;
   font-weight: 400;
-  fill: #a9bfd8;
-  opacity: 0.68;
+  fill: #8ca2bb;
   text-anchor: middle;
   dominant-baseline: middle;
   pointer-events: none;
   letter-spacing: 0.02em;
 }
 
-.country-label.large {
-  font-size: 9px;
+.country-label.conflict-label {
+  fill: #a9bfd8;
+  opacity: 0.7;
 }
 
-.country-label.medium {
-  font-size: 8px;
+.country-label.non-conflict-label {
+  fill: #8598ad;
+  opacity: 0.2;
 }
 
-.country-label.small {
-  font-size: 7px;
+.country-label.selected-label {
+  fill: #d7e9fa;
+  opacity: 0.9;
 }
 
+/* Tactical conflict routes: subtle animated dash + glow. */
 .conflict-line-halo {
   fill: none;
   stroke: rgba(255, 77, 77, 0.22);
@@ -305,7 +309,6 @@ body {
   border-radius: 6px;
   background: rgba(8, 20, 34, 0.95);
   padding: 3px 7px;
-  z-index: 5;
 }
 
 .retro-toggle {
@@ -420,6 +423,7 @@ body {
   max-height: 92px;
   overflow: auto;
 }
+
 
 .ai-status-card {
   padding-bottom: 0.3rem;
