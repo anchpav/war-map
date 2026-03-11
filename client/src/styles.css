@@ -238,28 +238,39 @@ body {
 }
 
 .country-label {
-  font-size: 9px;
   font-weight: 400;
   fill: #8ca2bb;
   text-anchor: middle;
   dominant-baseline: middle;
   pointer-events: none;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.015em;
+}
+
+.country-label.tier-large {
+  font-size: 8px;
+}
+
+.country-label.tier-medium {
+  font-size: 7px;
+}
+
+.country-label.tier-small {
+  font-size: 6px;
 }
 
 .country-label.conflict-label {
-  fill: #a9bfd8;
-  opacity: 0.7;
+  fill: #9db6d2;
+  opacity: 0.58;
 }
 
 .country-label.non-conflict-label {
-  fill: #8598ad;
+  fill: #7f93a8;
   opacity: 0.2;
 }
 
 .country-label.selected-label {
-  fill: #d7e9fa;
-  opacity: 0.9;
+  fill: #b8cde1;
+  opacity: 0.64;
 }
 
 /* Tactical conflict routes: subtle animated dash + glow. */

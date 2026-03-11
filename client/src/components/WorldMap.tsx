@@ -17,11 +17,14 @@ type WorldMapProps = {
 
 type Size = { width: number; height: number }
 type Tooltip = { x: number; y: number; text: string; visible: boolean }
+type LabelTier = 'large' | 'medium' | 'small'
+
 type CountryLabel = {
   name: string
   x: number
   y: number
   area: number
+  tier: LabelTier
   isConflict: boolean
   isSelected: boolean
 }
@@ -66,8 +69,8 @@ function buildHeatMap(conflicts: Conflict[]) {
  * - high zoom: conflict labels + faint non-conflict labels
  */
 function shouldShowLabel(zoomLevel: number, isConflict: boolean): boolean {
+  if (!isConflict) return false
   if (zoomLevel <= 1.8) return false
-  if (zoomLevel <= 3.4) return isConflict
   return true
 }
 
@@ -100,6 +103,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null)
   const autoZoomedCountryRef = useRef('')
   const zoomTransformRef = useRef<ZoomTransform>(zoomIdentity)
+  const clickMoveAnimationRef = useRef<number | null>(null)
 
   const [zoomLevel, setZoomLevel] = useState(1)
   const [tooltip, setTooltip] = useState<Tooltip>({ x: 0, y: 0, text: '', visible: false })
@@ -157,11 +161,16 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
         const height = Math.max(0, bounds[1][1] - bounds[0][1])
         const area = width * height
 
+        let tier: LabelTier = 'small'
+        if (area > size.width * size.height * 0.014) tier = 'large'
+        else if (area > size.width * size.height * 0.0055) tier = 'medium'
+
         return {
           name,
           x: point[0],
           y: point[1],
           area,
+          tier,
           isConflict: conflictCountries.has(name),
           isSelected: selectedCountry === name
         }
@@ -391,9 +400,13 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
       const ty = size.height / 2 - current.k * worldY
 
       const start = zoomTransformRef.current
-      const targetTransform = zoomIdentity.translate(tx, ty).scale(current.k)
+      const targetTransform = clampTransform(zoomIdentity.translate(tx, ty).scale(current.k))
       const startTime = performance.now()
-      const duration = 500
+      const duration = 620
+
+      if (clickMoveAnimationRef.current !== null) {
+        cancelAnimationFrame(clickMoveAnimationRef.current)
+      }
 
       const animate = (now: number) => {
         const t = Math.min(1, (now - startTime) / duration)
@@ -403,15 +416,26 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
           .scale(current.k)
 
         applyTransform(stepTransform)
-        if (t < 1) requestAnimationFrame(animate)
+
+        if (t < 1) {
+          clickMoveAnimationRef.current = requestAnimationFrame(animate)
+        } else {
+          clickMoveAnimationRef.current = null
+        }
       }
 
-      requestAnimationFrame(animate)
+      clickMoveAnimationRef.current = requestAnimationFrame(animate)
     }
 
     svgNode.addEventListener('click', onSvgClick)
-    return () => svgNode.removeEventListener('click', onSvgClick)
-  }, [size.width, size.height, applyTransform])
+    return () => {
+      svgNode.removeEventListener('click', onSvgClick)
+      if (clickMoveAnimationRef.current !== null) {
+        cancelAnimationFrame(clickMoveAnimationRef.current)
+        clickMoveAnimationRef.current = null
+      }
+    }
+  }, [size.width, size.height, applyTransform, clampTransform])
 
   return (
     <section className="panel map-panel" ref={ref}>
@@ -431,7 +455,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
                 key={label.name}
                 x={label.x}
                 y={label.y}
-                className={`country-label ${label.isConflict ? 'conflict-label' : 'non-conflict-label'} ${label.isSelected ? 'selected-label' : ''}`}
+                className={`country-label tier-${label.tier} ${label.isConflict ? 'conflict-label' : 'non-conflict-label'} ${label.isSelected ? 'selected-label' : ''}`}
               >
                 {label.name}
               </text>
