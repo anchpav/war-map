@@ -7,7 +7,6 @@ import { getCountryName, loadWorldGeoData } from './services/geoService'
 import type { Conflict, CountryFeatureCollection, Metrics } from './types'
 
 const START_YEAR = 1900
-const isAdmin = false
 
 type ConflictWithEnd = Conflict & { end?: string }
 
@@ -100,6 +99,32 @@ export default function App() {
   const [resetMapSignal, setResetMapSignal] = useState(0)
   const [lastUpdated, setLastUpdated] = useState('')
 
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showAdminPanel, setShowAdminPanel] = useState(false)
+  const [adminEmail, setAdminEmail] = useState('')
+  const [adminCode, setAdminCode] = useState('')
+  const [adminMessage, setAdminMessage] = useState('')
+  const [adminBusy, setAdminBusy] = useState(false)
+  const [aiActionBusy, setAiActionBusy] = useState(false)
+
+  const [aiStatus, setAiStatus] = useState<AIStatus>({
+    available: true,
+    lastRefresh: '—',
+    suggestedCount: 0,
+    mode: 'preview'
+  })
+
+  const refreshAdminStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/status', { credentials: 'include' })
+      if (!response.ok) return
+      const data = (await response.json()) as { isAdmin?: boolean }
+      setIsAdmin(Boolean(data.isAdmin))
+    } catch {
+      // Keep UI passive when server auth status is unavailable.
+    }
+  }, [])
+
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true)
@@ -118,7 +143,8 @@ export default function App() {
 
   useEffect(() => {
     loadDashboardData()
-  }, [loadDashboardData])
+    refreshAdminStatus()
+  }, [loadDashboardData, refreshAdminStatus])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -128,17 +154,28 @@ export default function App() {
       }
 
       if (event.key === 'Escape') {
+        if (showAdminPanel) {
+          setShowAdminPanel(false)
+          setAdminMessage('')
+          return
+        }
         setSelectedCountry('')
       }
 
       if (event.key.toLowerCase() === 'r') {
         setResetMapSignal((value) => value + 1)
       }
+
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault()
+        setShowAdminPanel((prev) => !prev)
+        setAdminMessage('')
+      }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [showAdminPanel])
 
   const countries = useMemo(() => {
     if (!geoData) return []
@@ -178,18 +215,91 @@ export default function App() {
       .slice(0, 3)
   }, [visibleConflicts])
 
-  const aiStatus: AIStatus = {
-    available: true,
-    lastRefresh: '—',
-    suggestedCount: 0,
-    mode: 'preview'
+  async function sendAdminCode() {
+    try {
+      setAdminBusy(true)
+      setAdminMessage('Sending code…')
+
+      const response = await fetch('/api/admin/request-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: adminEmail.trim() })
+      })
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { message?: string }
+        setAdminMessage(data.message || 'Unable to send code.')
+        return
+      }
+
+      setAdminMessage('Code sent. Check admin email.')
+    } catch {
+      setAdminMessage('Failed to send code.')
+    } finally {
+      setAdminBusy(false)
+    }
+  }
+
+  async function verifyAdminCode() {
+    try {
+      setAdminBusy(true)
+      setAdminMessage('Verifying…')
+
+      const response = await fetch('/api/admin/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: adminEmail.trim(), code: adminCode.trim() })
+      })
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { message?: string }
+        setAdminMessage(data.message || 'Verification failed.')
+        return
+      }
+
+      await refreshAdminStatus()
+      setShowAdminPanel(false)
+      setAdminCode('')
+      setAdminMessage('Admin verified.')
+    } catch {
+      setAdminMessage('Verification failed.')
+    } finally {
+      setAdminBusy(false)
+    }
+  }
+
+  async function runAiAction(path: '/api/update-conflicts' | '/api/apply-conflicts') {
+    try {
+      setAiActionBusy(true)
+      const response = await fetch(path, {
+        method: path === '/api/apply-conflicts' ? 'POST' : 'GET',
+        credentials: 'include'
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        setIsAdmin(false)
+        setAdminMessage('Admin session expired. Re-authenticate.')
+        return
+      }
+
+      const now = new Date().toLocaleTimeString()
+      const nextMode = path === '/api/apply-conflicts' ? 'applied' : 'preview'
+      setAiStatus((prev) => ({ ...prev, lastRefresh: now, mode: nextMode }))
+      setAdminMessage(path === '/api/apply-conflicts' ? 'Apply request sent.' : 'Refresh request sent.')
+    } catch {
+      setAdminMessage('AI action failed.')
+    } finally {
+      setAiActionBusy(false)
+    }
   }
 
   return (
     <main className="app-shell tactical-shell">
       <header className="panel header-row tactical-header">
         <div>
-          <h1>Global War Tracker</h1>
+          <h1 onDoubleClick={() => setShowAdminPanel((prev) => !prev)}>Global War Tracker</h1>
           <span className="header-tag">Tactical Command Console</span>
           <p>{loading ? 'Tactical feed sync in progress…' : `Command feed online • ${lastUpdated || '—'}`}</p>
         </div>
@@ -256,14 +366,24 @@ export default function App() {
               <li>Last AI refresh: {aiStatus.lastRefresh}</li>
               <li>Suggested conflicts: {aiStatus.suggestedCount}</li>
               <li>AI mode: {aiStatus.mode}</li>
+              <li>Admin session: {isAdmin ? 'Active' : 'Locked'}</li>
             </ul>
             {isAdmin ? (
               <div className="ai-admin-controls">
-                <button type="button" className="btn-mini">AI Refresh</button>
-                <button type="button" className="btn-mini btn-secondary">Apply AI</button>
+                <button type="button" className="btn-mini" onClick={() => runAiAction('/api/update-conflicts')} disabled={aiActionBusy}>
+                  AI Refresh
+                </button>
+                <button
+                  type="button"
+                  className="btn-mini btn-secondary"
+                  onClick={() => runAiAction('/api/apply-conflicts')}
+                  disabled={aiActionBusy}
+                >
+                  Apply AI
+                </button>
               </div>
             ) : (
-              <small className="ai-admin-note">Admin controls hidden</small>
+              <small className="ai-admin-note">Admin controls hidden (double-click title or Ctrl+Shift+A)</small>
             )}
           </section>
 
@@ -299,6 +419,48 @@ export default function App() {
           </section>
         </aside>
       </section>
+
+      {showAdminPanel && (
+        <section className="admin-auth-backdrop" onClick={() => setShowAdminPanel(false)}>
+          <div className="panel admin-auth-panel" onClick={(event) => event.stopPropagation()}>
+            <h3>Admin verification</h3>
+            <label htmlFor="admin-email">Admin email</label>
+            <input
+              id="admin-email"
+              type="email"
+              value={adminEmail}
+              onChange={(event) => setAdminEmail(event.target.value)}
+              placeholder="admin@example.com"
+            />
+
+            <div className="admin-auth-actions">
+              <button type="button" className="btn-mini" onClick={sendAdminCode} disabled={adminBusy || !adminEmail.trim()}>
+                Send code
+              </button>
+            </div>
+
+            <label htmlFor="admin-code">One-time code</label>
+            <input
+              id="admin-code"
+              type="text"
+              value={adminCode}
+              onChange={(event) => setAdminCode(event.target.value)}
+              placeholder="123456"
+            />
+
+            <div className="admin-auth-actions">
+              <button type="button" className="btn-mini" onClick={verifyAdminCode} disabled={adminBusy || !adminCode.trim()}>
+                Verify
+              </button>
+              <button type="button" className="btn-mini btn-secondary" onClick={() => setShowAdminPanel(false)}>
+                Close
+              </button>
+            </div>
+
+            {adminMessage && <small className="admin-auth-message">{adminMessage}</small>}
+          </div>
+        </section>
+      )}
     </main>
   )
 }
