@@ -131,13 +131,27 @@ async function sendAdminCodeEmail(email, code) {
   })
 }
 
+
+function normalizeOpponentType(value) {
+  return value === 'non-state' || value === 'proxy' ? value : 'state'
+}
+
+function normalizeConflict(conflict) {
+  return {
+    ...conflict,
+    opponentType: normalizeOpponentType(conflict?.opponentType)
+  }
+}
+
 /**
  * Read conflicts from client/public/data/conflicts.json.
  * Keeping file access in one function keeps endpoint code simple.
  */
 async function readConflicts() {
   const raw = await fs.readFile(conflictsPath, 'utf-8')
-  return JSON.parse(raw)
+  const parsed = JSON.parse(raw)
+  if (!Array.isArray(parsed)) return []
+  return parsed.map((conflict) => normalizeConflict(conflict))
 }
 
 app.get('/api/conflicts', async (_req, res) => {

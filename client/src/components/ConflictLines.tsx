@@ -1,9 +1,19 @@
-import type { Conflict } from '../types'
+import type { Conflict, OpponentType } from '../types'
 
 type ConflictLinesProps = {
   conflicts: Conflict[]
   centroids: Map<string, [number, number]>
   onHoverText: (text: string) => void
+}
+
+function normalizeOpponentType(value?: OpponentType): OpponentType {
+  return value === 'non-state' || value === 'proxy' ? value : 'state'
+}
+
+function routeStyle(type: OpponentType): { dashArray: string; color: string } {
+  if (type === 'proxy') return { dashArray: '8 7', color: '#ff9f43' }
+  if (type === 'non-state') return { dashArray: '2 6', color: '#facc15' }
+  return { dashArray: '', color: '#ff4d4d' }
 }
 
 /**
@@ -30,14 +40,17 @@ export function ConflictLines({ conflicts, centroids, onHoverText }: ConflictLin
 
         const pathData = buildCurvePath(from, to)
         const stateClass = conflict.active === false ? 'historical' : 'active'
+        const opponentType = normalizeOpponentType(conflict.opponentType)
+        const style = routeStyle(opponentType)
 
         return (
           <g key={`${conflict.country}-${conflict.opponent}-${index}`}>
-            <path d={pathData} className={`conflict-line-halo ${stateClass}`} />
+            <path d={pathData} className={`conflict-line-halo ${stateClass}`} style={{ stroke: style.color }} />
             <path
               d={pathData}
               className={`conflict-line ${stateClass}`}
-              onMouseEnter={() => onHoverText(`${conflict.country} vs ${conflict.opponent}`)}
+              style={{ stroke: style.color, strokeDasharray: style.dashArray || undefined }}
+              onMouseEnter={() => onHoverText(`${conflict.country} vs ${conflict.opponent} (${opponentType})`)}
               onMouseLeave={() => onHoverText('')}
             />
           </g>

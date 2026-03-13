@@ -4,11 +4,11 @@ import { MetricsPanel } from './components/MetricsPanel'
 import { WorldMap } from './components/WorldMap'
 import { loadConflicts } from './services/conflictService'
 import { getCountryName, loadWorldGeoData } from './services/geoService'
-import type { Conflict, CountryFeatureCollection, Metrics } from './types'
+import type { Conflict, CountryFeatureCollection, Metrics, OpponentType } from './types'
 
 const START_YEAR = 1900
 
-type ConflictWithEnd = Conflict & { end?: string }
+type ConflictWithEnd = Conflict
 
 type AIStatus = {
   available: boolean
@@ -63,6 +63,10 @@ function daysWithoutActiveWar(conflicts: ConflictWithEnd[], selectedYear: number
   return lastEnded ? daysSince(lastEnded) : 0
 }
 
+function normalizeOpponentType(value?: OpponentType): OpponentType {
+  return value === 'non-state' || value === 'proxy' ? value : 'state'
+}
+
 /** Build timeline-aware tactical metrics for world + selected country scope. */
 function buildMetrics(allConflicts: ConflictWithEnd[], selectedCountry: string, selectedYear: number): Metrics {
   const inTimeline = allConflicts.filter((conflict) => {
@@ -72,7 +76,13 @@ function buildMetrics(allConflicts: ConflictWithEnd[], selectedCountry: string, 
 
   const activeConflictsList = inTimeline.filter((conflict) => isActiveInYear(conflict, selectedYear))
 
-  const countriesAtWar = new Set(activeConflictsList.flatMap((conflict) => [conflict.country, conflict.opponent])).size
+  // Countries-at-war is a state-only metric: non-state/proxy opponents do not add extra countries.
+  const countriesAtWar = new Set(
+    activeConflictsList.flatMap((conflict) => {
+      const opponentType = normalizeOpponentType(conflict.opponentType)
+      return opponentType === 'state' ? [conflict.country, conflict.opponent] : [conflict.country]
+    })
+  ).size
 
   const selectedScope = selectedCountry
     ? inTimeline.filter((conflict) => conflict.country === selectedCountry || conflict.opponent === selectedCountry)

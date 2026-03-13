@@ -1,7 +1,11 @@
+export type OpponentType = 'state' | 'non-state' | 'proxy'
+
 export type Conflict = {
   country: string
   opponent: string
+  opponentType?: OpponentType
   start?: string
+  end?: string | null
   active?: boolean
 }
 
