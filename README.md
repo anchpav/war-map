@@ -65,6 +65,23 @@ npm run dev
 
 UI: `http://localhost:5173`
 
+## Environment Setup
+
+1) Copy the template:
+
+```bash
+cp .env.example .env
+```
+
+2) Fill in the required values:
+
+- `GEMINI_API_KEY`
+- `ADMIN_EMAIL`
+- `ADMIN_SESSION_SECRET`
+- SMTP settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`)
+
+3) Restart the server so new environment variables are loaded.
+
 ## Notes
 
 - `WorldMap.tsx` memoizes heavy projection/path work for stable performance.
