@@ -3,15 +3,23 @@ import express from 'express'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
 import { detectConflictsWithGemini } from './aiConflictService.js'
-import { applySuggestedConflicts, readSuggestedConflicts, writeSuggestedConflicts } from './conflictStorage.js'
+import {
+  applySuggestedConflicts,
+  readSuggestedConflicts,
+  writeSuggestedConflicts
+} from './conflictStorage.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+dotenv.config({ path: path.join(__dirname, '..', '.env') })
+
 const conflictsPath = path.join(__dirname, '..', 'client', 'public', 'data', 'conflicts.json')
 
 const app = express()
-const PORT = 3001
+const PORT = Number(process.env.PORT || 3001)
 
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase()
 const ADMIN_SESSION_SECRET = String(process.env.ADMIN_SESSION_SECRET || 'dev-admin-secret')
@@ -22,6 +30,12 @@ const pendingCodes = new Map()
 const adminSessions = new Map()
 
 app.use(express.json())
+
+console.log('ADMIN_EMAIL loaded:', ADMIN_EMAIL || '(empty)')
+console.log(
+  'SMTP configured:',
+  Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+)
 
 function getCookie(req, name) {
   const raw = req.headers.cookie
@@ -103,6 +117,7 @@ function requireAdmin(req, res, next) {
     res.status(401).json({ message: 'Admin session required.' })
     return
   }
+
   req.adminSession = session
   next()
 }
@@ -117,7 +132,9 @@ async function sendAdminCodeEmail(email, code) {
     throw new Error('SMTP configuration missing. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS.')
   }
 
-  const nodemailer = await import('nodemailer')
+  const nodemailerModule = await import('nodemailer')
+  const nodemailer = nodemailerModule.default || nodemailerModule
+
   const transporter = nodemailer.createTransport({
     host,
     port,
@@ -133,7 +150,6 @@ async function sendAdminCodeEmail(email, code) {
   })
 }
 
-
 function normalizeOpponentType(value) {
   return value === 'non-state' || value === 'proxy' ? value : 'state'
 }
@@ -145,16 +161,26 @@ function normalizeConflict(conflict) {
   }
 }
 
-/**
- * Read conflicts from client/public/data/conflicts.json.
- * Keeping file access in one function keeps endpoint code simple.
- */
 async function readConflicts() {
   const raw = await fs.readFile(conflictsPath, 'utf-8')
   const parsed = JSON.parse(raw)
   if (!Array.isArray(parsed)) return []
   return parsed.map((conflict) => normalizeConflict(conflict))
 }
+
+app.get('/', (_req, res) => {
+  res.json({
+    message: 'Global War Tracker API is running',
+    endpoints: [
+      '/api/conflicts',
+      '/api/admin/request-code',
+      '/api/admin/verify-code',
+      '/api/admin/status',
+      '/api/update-conflicts',
+      '/api/apply-conflicts'
+    ]
+  })
+})
 
 app.get('/api/conflicts', async (_req, res) => {
   try {
@@ -169,7 +195,13 @@ app.get('/api/conflicts', async (_req, res) => {
 app.post('/api/admin/request-code', async (req, res) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase()
-    if (!email || !ADMIN_EMAIL || email !== ADMIN_EMAIL) {
+
+    if (!ADMIN_EMAIL) {
+      res.status(500).json({ message: 'ADMIN_EMAIL is not configured on the server.' })
+      return
+    }
+
+    if (!email || email !== ADMIN_EMAIL) {
       res.status(403).json({ message: 'Unauthorized admin email.' })
       return
     }
@@ -189,7 +221,12 @@ app.post('/api/admin/verify-code', (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase()
   const code = String(req.body?.code || '').trim()
 
-  if (!email || !code || !ADMIN_EMAIL || email !== ADMIN_EMAIL) {
+  if (!ADMIN_EMAIL) {
+    res.status(500).json({ message: 'ADMIN_EMAIL is not configured on the server.' })
+    return
+  }
+
+  if (!email || !code || email !== ADMIN_EMAIL) {
     res.status(403).json({ message: 'Unauthorized admin verification request.' })
     return
   }
@@ -205,6 +242,12 @@ app.post('/api/admin/verify-code', (req, res) => {
 
   const signedToken = createSessionToken()
   const token = verifySessionToken(signedToken)
+
+  if (!token) {
+    res.status(500).json({ message: 'Failed to create admin session.' })
+    return
+  }
+
   adminSessions.set(token, { email, expiresAt: Date.now() + SESSION_TTL_MS })
 
   setSessionCookie(res, signedToken)
@@ -237,12 +280,20 @@ app.get('/api/update-conflicts', requireAdmin, async (_req, res) => {
   } catch (error) {
     console.error('Failed to refresh AI conflict suggestions:', error)
 
-    const suggested = await readSuggestedConflicts()
-    res.status(500).json({
-      mode: 'preview',
-      suggestedCount: suggested.length,
-      message: 'AI refresh failed.'
-    })
+    try {
+      const suggested = await readSuggestedConflicts()
+      res.status(500).json({
+        mode: 'preview',
+        suggestedCount: suggested.length,
+        message: 'AI refresh failed.'
+      })
+    } catch {
+      res.status(500).json({
+        mode: 'preview',
+        suggestedCount: 0,
+        message: 'AI refresh failed.'
+      })
+    }
   }
 })
 
