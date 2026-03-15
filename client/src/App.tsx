@@ -294,10 +294,39 @@ export default function App() {
         return
       }
 
+      const payload = (await response.json().catch(() => ({}))) as {
+        message?: string
+        mode?: 'preview' | 'applied'
+        suggestedCount?: number
+        appliedCount?: number
+      }
+
+      if (!response.ok) {
+        setAdminMessage(payload.message || 'AI action failed.')
+        return
+      }
+
       const now = new Date().toLocaleTimeString()
-      const nextMode = path === '/api/apply-conflicts' ? 'applied' : 'preview'
-      setAiStatus((prev) => ({ ...prev, lastRefresh: now, mode: nextMode }))
-      setAdminMessage(path === '/api/apply-conflicts' ? 'Apply request sent.' : 'Refresh request sent.')
+      const nextMode = payload.mode || (path === '/api/apply-conflicts' ? 'applied' : 'preview')
+      const suggestedCount =
+        typeof payload.suggestedCount === 'number'
+          ? payload.suggestedCount
+          : typeof payload.appliedCount === 'number'
+          ? payload.appliedCount
+          : aiStatus.suggestedCount
+
+      setAiStatus((prev) => ({
+        ...prev,
+        lastRefresh: now,
+        mode: nextMode,
+        suggestedCount
+      }))
+
+      if (path === '/api/apply-conflicts') {
+        await loadDashboardData()
+      }
+
+      setAdminMessage(payload.message || (path === '/api/apply-conflicts' ? 'Apply request sent.' : 'Refresh request sent.'))
     } catch {
       setAdminMessage('AI action failed.')
     } finally {
