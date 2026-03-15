@@ -3,6 +3,15 @@ import express from 'express'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { detectConflictsWithGemini } from './aiConflictService.js'
+import { applySuggestedConflicts, readSuggestedConflicts, writeSuggestedConflicts } from './conflictStorage.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const conflictsPath = path.join(__dirname, '..', 'client', 'public', 'data', 'conflicts.json')
+
+const app = express()
+const PORT = 3001
 import dotenv from 'dotenv'
 import { detectConflictsWithGemini } from './aiConflictService.js'
 import {
@@ -132,6 +141,7 @@ async function sendAdminCodeEmail(email, code) {
     throw new Error('SMTP configuration missing. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS.')
   }
 
+  const nodemailer = await import('nodemailer')
   const nodemailerModule = await import('nodemailer')
   const nodemailer = nodemailerModule.default || nodemailerModule
 
@@ -150,6 +160,7 @@ async function sendAdminCodeEmail(email, code) {
   })
 }
 
+
 function normalizeOpponentType(value) {
   return value === 'non-state' || value === 'proxy' ? value : 'state'
 }
@@ -161,6 +172,10 @@ function normalizeConflict(conflict) {
   }
 }
 
+/**
+ * Read conflicts from client/public/data/conflicts.json.
+ * Keeping file access in one function keeps endpoint code simple.
+ */
 async function readConflicts() {
   const raw = await fs.readFile(conflictsPath, 'utf-8')
   const parsed = JSON.parse(raw)
@@ -195,6 +210,7 @@ app.get('/api/conflicts', async (_req, res) => {
 app.post('/api/admin/request-code', async (req, res) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase()
+    if (!email || !ADMIN_EMAIL || email !== ADMIN_EMAIL) {
 
     if (!ADMIN_EMAIL) {
       res.status(500).json({ message: 'ADMIN_EMAIL is not configured on the server.' })
@@ -221,6 +237,7 @@ app.post('/api/admin/verify-code', (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase()
   const code = String(req.body?.code || '').trim()
 
+  if (!email || !code || !ADMIN_EMAIL || email !== ADMIN_EMAIL) {
   if (!ADMIN_EMAIL) {
     res.status(500).json({ message: 'ADMIN_EMAIL is not configured on the server.' })
     return
@@ -280,6 +297,12 @@ app.get('/api/update-conflicts', requireAdmin, async (_req, res) => {
   } catch (error) {
     console.error('Failed to refresh AI conflict suggestions:', error)
 
+    const suggested = await readSuggestedConflicts()
+    res.status(500).json({
+      mode: 'preview',
+      suggestedCount: suggested.length,
+      message: 'AI refresh failed.'
+    })
     try {
       const suggested = await readSuggestedConflicts()
       res.status(500).json({

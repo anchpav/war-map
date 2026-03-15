@@ -286,7 +286,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
 
     // Zoom state drives transform and smart label density.
     const behavior = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([1, 8])
+      .scaleExtent([1, 12])
       // Tactical navigation: keep wheel zoom, disable drag-based pan.
       .filter((event: any) => event.type === 'wheel')
       .on('zoom', (event) => {
@@ -364,7 +364,7 @@ export function WorldMap({ geoData, conflicts, selectedCountry, onSelectCountry,
     const x = (bounds[0][0] + bounds[1][0]) / 2
     const y = (bounds[0][1] + bounds[1][1]) / 2
 
-    const scale = Math.max(1, Math.min(8, 0.9 / Math.max(dx / size.width, dy / size.height)))
+    const scale = Math.max(1, Math.min(12, 1.25 / Math.max(dx / size.width, dy / size.height)))
     const tx = size.width / 2 - scale * x
     const ty = size.height / 2 - scale * y
 

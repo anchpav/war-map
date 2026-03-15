@@ -67,6 +67,14 @@ body {
   color: var(--text-muted);
 }
 
+.app-version {
+  display: inline-block;
+  margin-top: 0.12rem;
+  font-size: 0.66rem;
+  color: #9db4c8;
+  letter-spacing: 0.04em;
+}
+
 .header-tag {
   display: inline-block;
   margin-top: 0.18rem;
@@ -273,11 +281,11 @@ body {
   opacity: 0.64;
 }
 
-/* Tactical conflict routes: subtle animated dash + glow. */
+/* Tactical conflict routes: lighter lines with subtle motion. */
 .conflict-line-halo {
   fill: none;
-  stroke: rgba(255, 77, 77, 0.22);
-  stroke-width: 4.2;
+  stroke: rgba(255, 77, 77, 0.15);
+  stroke-width: 2.2;
   stroke-linecap: round;
   pointer-events: none;
 }
@@ -285,14 +293,24 @@ body {
 .conflict-line {
   fill: none;
   stroke: var(--conflict);
-  stroke-width: 2.3;
+  stroke-width: 1.35;
   stroke-linecap: round;
   stroke-dasharray: 8 7;
-  filter: drop-shadow(0 0 6px var(--conflict));
-  animation: flow 1.4s linear infinite, pulse 2.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 2px var(--conflict));
+  animation: flow 2.4s linear infinite, pulse 3.4s ease-in-out infinite;
 }
 
 .conflict-line.historical {
+  opacity: 0.26;
+}
+
+.conflict-pulse {
+  filter: drop-shadow(0 0 2px currentColor);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.conflict-pulse.historical {
   opacity: 0.34;
 }
 
@@ -463,6 +481,14 @@ body {
   opacity: 0.9;
 }
 
+.ai-trust-note {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.64rem;
+  color: #9bb2c5;
+  opacity: 0.9;
+}
+
 .compact-list {
   margin: 0;
   padding-left: 0.95rem;
@@ -479,11 +505,20 @@ body {
 
 .footer-panel {
   min-height: 22px;
-  padding: 0.22rem 0.44rem;
+  padding: 0.24rem 0.5rem;
   font-size: 0.74rem;
-  color: var(--text-muted);
+  color: #b1c7d9;
+  border-color: #35516d;
+  background: linear-gradient(180deg, rgba(17, 31, 44, 0.95) 0%, rgba(10, 20, 30, 0.95) 100%);
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.footer-version {
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: #8da8be;
 }
 
 .error {

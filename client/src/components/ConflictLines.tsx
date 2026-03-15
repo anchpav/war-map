@@ -10,10 +10,10 @@ function normalizeOpponentType(value?: OpponentType): OpponentType {
   return value === 'non-state' || value === 'proxy' ? value : 'state'
 }
 
-function routeStyle(type: OpponentType): { dashArray: string; color: string } {
-  if (type === 'proxy') return { dashArray: '8 7', color: '#ff9f43' }
-  if (type === 'non-state') return { dashArray: '2 6', color: '#facc15' }
-  return { dashArray: '', color: '#ff4d4d' }
+function routeStyle(type: OpponentType): { dashArray: string; color: string; pulseDur: string } {
+  if (type === 'proxy') return { dashArray: '7 8', color: '#ff9f43', pulseDur: '4.8s' }
+  if (type === 'non-state') return { dashArray: '2 7', color: '#facc15', pulseDur: '5.2s' }
+  return { dashArray: '', color: '#ff4d4d', pulseDur: '4.4s' }
 }
 
 /**
@@ -53,6 +53,9 @@ export function ConflictLines({ conflicts, centroids, onHoverText }: ConflictLin
               onMouseEnter={() => onHoverText(`${conflict.country} vs ${conflict.opponent} (${opponentType})`)}
               onMouseLeave={() => onHoverText('')}
             />
+            <circle className={`conflict-pulse ${stateClass}`} r={1.8} style={{ fill: style.color }}>
+              <animateMotion dur={style.pulseDur} repeatCount="indefinite" rotate="auto" path={pathData} />
+            </circle>
           </g>
         )
       })}

@@ -82,6 +82,14 @@ cp .env.example .env
 
 3) Restart the server so new environment variables are loaded.
 
+## Protected files
+
+The following file is protected infrastructure and should only be changed with focused review:
+
+- `server/index.js`
+
+Reason: it contains admin email verification, signed cookie sessions, and protected admin endpoint wiring.
+
 ## Notes
 
 - `WorldMap.tsx` memoizes heavy projection/path work for stable performance.

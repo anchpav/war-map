@@ -4,6 +4,12 @@ type MetricsPanelProps = {
   metrics: Metrics
 }
 
+const NO_DATA_DAYS_NA = -1
+
+function formatNoWarDays(value: number): string {
+  return value === NO_DATA_DAYS_NA ? 'N/A' : String(value)
+}
+
 /** Tactical telemetry strip: dense and quickly scannable. */
 export function MetricsPanel({ metrics }: MetricsPanelProps) {
   return (
@@ -18,11 +24,11 @@ export function MetricsPanel({ metrics }: MetricsPanelProps) {
       </article>
       <article className="panel metric-card">
         <span>Days without active war</span>
-        <strong>{metrics.globalDaysWithoutWar}</strong>
+        <strong>{formatNoWarDays(metrics.globalDaysWithoutWar)}</strong>
       </article>
       <article className="panel metric-card">
         <span>Selected no-war days</span>
-        <strong>{metrics.selectedCountryDaysWithoutWar}</strong>
+        <strong>{formatNoWarDays(metrics.selectedCountryDaysWithoutWar)}</strong>
       </article>
       <article className="panel metric-card">
         <span>Selected conflicts</span>

@@ -7,6 +7,8 @@ import { getCountryName, loadWorldGeoData } from './services/geoService'
 import type { Conflict, CountryFeatureCollection, Metrics, OpponentType } from './types'
 
 const START_YEAR = 1900
+const NO_WAR_DAYS_NA = -1
+const APP_VERSION = '0.8.0'
 
 type ConflictWithEnd = Conflict
 
@@ -14,6 +16,10 @@ type AIStatus = {
   available: boolean
   lastRefresh: string
   suggestedCount: number
+  sourceCount: number
+  confidenceLabel: 'experimental'
+  requiresHumanApproval: boolean
+  lastStatus: string
   mode: 'preview' | 'applied'
 }
 
@@ -50,7 +56,10 @@ function isActiveInYear(conflict: ConflictWithEnd, selectedYear: number): boolea
  * - otherwise since most recently ended conflict
  */
 function daysWithoutActiveWar(conflicts: ConflictWithEnd[], selectedYear: number): number {
-  if (!conflicts.length) return 0
+  // Truthful no-war-days fallback:
+  // - 0 only when an active conflict exists in scope
+  // - N/A sentinel when there is no conflict history in scope
+  if (!conflicts.length) return NO_WAR_DAYS_NA
 
   const hasActive = conflicts.some((conflict) => isActiveInYear(conflict, selectedYear))
   if (hasActive) return 0
@@ -60,7 +69,7 @@ function daysWithoutActiveWar(conflicts: ConflictWithEnd[], selectedYear: number
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => b.localeCompare(a))[0]
 
-  return lastEnded ? daysSince(lastEnded) : 0
+  return lastEnded ? daysSince(lastEnded) : NO_WAR_DAYS_NA
 }
 
 function normalizeOpponentType(value?: OpponentType): OpponentType {
@@ -121,6 +130,10 @@ export default function App() {
     available: true,
     lastRefresh: '—',
     suggestedCount: 0,
+    sourceCount: 0,
+    confidenceLabel: 'experimental',
+    requiresHumanApproval: true,
+    lastStatus: 'Waiting for admin refresh',
     mode: 'preview'
   })
 
@@ -299,10 +312,13 @@ export default function App() {
         mode?: 'preview' | 'applied'
         suggestedCount?: number
         appliedCount?: number
+        sourceCount?: number
       }
 
       if (!response.ok) {
-        setAdminMessage(payload.message || 'AI action failed.')
+        const failMessage = payload.message || 'AI action failed.'
+        setAdminMessage(failMessage)
+        setAiStatus((prev) => ({ ...prev, lastStatus: failMessage }))
         return
       }
 
@@ -319,7 +335,9 @@ export default function App() {
         ...prev,
         lastRefresh: now,
         mode: nextMode,
-        suggestedCount
+        suggestedCount,
+        sourceCount: typeof payload.sourceCount === 'number' ? payload.sourceCount : prev.sourceCount,
+        lastStatus: payload.message || 'AI action completed'
       }))
 
       if (path === '/api/apply-conflicts') {
@@ -329,6 +347,7 @@ export default function App() {
       setAdminMessage(payload.message || (path === '/api/apply-conflicts' ? 'Apply request sent.' : 'Refresh request sent.'))
     } catch {
       setAdminMessage('AI action failed.')
+      setAiStatus((prev) => ({ ...prev, lastStatus: 'AI action failed.' }))
     } finally {
       setAiActionBusy(false)
     }
@@ -341,6 +360,7 @@ export default function App() {
           <h1 onDoubleClick={() => setShowAdminPanel((prev) => !prev)}>Global War Tracker</h1>
           <span className="header-tag">Tactical Command Console</span>
           <p>{loading ? 'Tactical feed sync in progress…' : `Command feed online • ${lastUpdated || '—'}`}</p>
+          <small className="app-version">Build: {APP_VERSION}</small>
         </div>
         <button type="button" className="btn-mini" onClick={loadDashboardData} disabled={loading}>
           {loading ? 'Sync…' : 'Refresh'}
@@ -384,7 +404,10 @@ export default function App() {
             />
           )}
 
-          <footer className="panel footer-panel">{hoverText || 'F: focus search • ESC: clear country • R: reset map'}</footer>
+          <footer className="panel footer-panel">
+            <span>{hoverText || 'F: focus search • ESC: clear country • R: reset map'}</span>
+            <span className="footer-version">v{APP_VERSION}</span>
+          </footer>
         </section>
 
         <aside className="side-column">
@@ -403,10 +426,15 @@ export default function App() {
             <ul className="compact-list ai-status-list">
               <li>AI update available: {aiStatus.available ? 'Yes' : 'No'}</li>
               <li>Last AI refresh: {aiStatus.lastRefresh}</li>
+              <li>Last refresh status: {aiStatus.lastStatus}</li>
               <li>Suggested conflicts: {aiStatus.suggestedCount}</li>
+              <li>Sources analyzed: {aiStatus.sourceCount}</li>
               <li>AI mode: {aiStatus.mode}</li>
+              <li>AI confidence: {aiStatus.confidenceLabel}</li>
+              <li>Human approval required: {aiStatus.requiresHumanApproval ? 'Yes' : 'No'}</li>
               <li>Admin session: {isAdmin ? 'Active' : 'Locked'}</li>
             </ul>
+            <small className="ai-trust-note">AI suggestions are advisory and require human admin approval before apply.</small>
             {isAdmin ? (
               <div className="ai-admin-controls">
                 <button type="button" className="btn-mini" onClick={() => runAiAction('/api/update-conflicts')} disabled={aiActionBusy}>
