@@ -1,0 +1,56 @@
+[
+  {
+    "country": "Ukraine",
+    "opponent": "Russia",
+    "start": "2022-02-24",
+    "end": null
+  },
+  {
+    "country": "Israel",
+    "opponent": "Hamas",
+    "start": "2023-10-07",
+    "end": null
+  },
+  {
+    "country": "Sudan",
+    "opponent": "Rapid Support Forces",
+    "start": "2023-04-15",
+    "end": null
+  },
+  {
+    "country": "Myanmar",
+    "opponent": "Anti-junta resistance groups",
+    "start": "2021-02-01",
+    "end": null
+  },
+  {
+    "country": "Democratic Republic of Congo",
+    "opponent": "M23 rebel group",
+    "start": "2021-11-07",
+    "end": null
+  },
+  {
+    "country": "Yemen",
+    "opponent": "Houthi movement",
+    "start": "2014-09-21",
+    "end": null
+  },
+  {
+    "country": "Syria",
+    "opponent": "Various armed opposition groups",
+    "start": "2011-03-15",
+    "end": null
+  },
+  {
+    "country": "Ethiopia",
+    "opponent": "Amhara and Oromo armed factions",
+    "start": "2022-08-01",
+    "end": null
+  },
+  {
+    "country": "Haiti",
+    "opponent": "Armed gangs",
+    "start": "2021-07-07",
+    "end": null
+  }
+]
