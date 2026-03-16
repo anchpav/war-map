@@ -80,6 +80,10 @@ export async function readSuggestedConflicts() {
 
 export async function applySuggestedConflicts() {
   const suggested = await readSuggestedConflicts()
+  if (!suggested.length) {
+    throw new Error('No suggested conflicts to apply.')
+  }
+
   await fs.writeFile(conflictsFile, JSON.stringify(suggested, null, 2) + '\n', 'utf-8')
   return suggested
 }

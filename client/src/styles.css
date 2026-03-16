@@ -489,6 +489,13 @@ body {
   opacity: 0.9;
 }
 
+.ai-warning-note {
+  display: block;
+  margin-top: 0.18rem;
+  font-size: 0.64rem;
+  color: #fbbf24;
+}
+
 .compact-list {
   margin: 0;
   padding-left: 0.95rem;

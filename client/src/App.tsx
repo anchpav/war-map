@@ -17,9 +17,12 @@ type AIStatus = {
   lastRefresh: string
   suggestedCount: number
   sourceCount: number
+  extractedCount: number
+  rawTextLength: number
   confidenceLabel: 'experimental'
   requiresHumanApproval: boolean
   lastStatus: string
+  warning: string
   mode: 'preview' | 'applied'
 }
 
@@ -131,9 +134,12 @@ export default function App() {
     lastRefresh: '—',
     suggestedCount: 0,
     sourceCount: 0,
+    extractedCount: 0,
+    rawTextLength: 0,
     confidenceLabel: 'experimental',
     requiresHumanApproval: true,
     lastStatus: 'Waiting for admin refresh',
+    warning: '',
     mode: 'preview'
   })
 
@@ -313,12 +319,14 @@ export default function App() {
         suggestedCount?: number
         appliedCount?: number
         sourceCount?: number
+        extractedCount?: number
+        rawTextLength?: number
       }
 
       if (!response.ok) {
         const failMessage = payload.message || 'AI action failed.'
         setAdminMessage(failMessage)
-        setAiStatus((prev) => ({ ...prev, lastStatus: failMessage }))
+        setAiStatus((prev) => ({ ...prev, lastStatus: failMessage, warning: failMessage }))
         return
       }
 
@@ -331,13 +339,20 @@ export default function App() {
           ? payload.appliedCount
           : aiStatus.suggestedCount
 
+      const extractedCount = typeof payload.extractedCount === 'number' ? payload.extractedCount : 0
+      const rawTextLength = typeof payload.rawTextLength === 'number' ? payload.rawTextLength : 0
+      const warning = extractedCount === 0 && path === '/api/update-conflicts' ? 'AI returned no valid conflict records.' : ''
+
       setAiStatus((prev) => ({
         ...prev,
         lastRefresh: now,
         mode: nextMode,
         suggestedCount,
         sourceCount: typeof payload.sourceCount === 'number' ? payload.sourceCount : prev.sourceCount,
-        lastStatus: payload.message || 'AI action completed'
+        extractedCount,
+        rawTextLength,
+        lastStatus: payload.message || 'AI action completed',
+        warning
       }))
 
       if (path === '/api/apply-conflicts') {
@@ -347,7 +362,7 @@ export default function App() {
       setAdminMessage(payload.message || (path === '/api/apply-conflicts' ? 'Apply request sent.' : 'Refresh request sent.'))
     } catch {
       setAdminMessage('AI action failed.')
-      setAiStatus((prev) => ({ ...prev, lastStatus: 'AI action failed.' }))
+      setAiStatus((prev) => ({ ...prev, lastStatus: 'AI action failed.', warning: 'AI action failed.' }))
     } finally {
       setAiActionBusy(false)
     }
@@ -429,12 +444,15 @@ export default function App() {
               <li>Last refresh status: {aiStatus.lastStatus}</li>
               <li>Suggested conflicts: {aiStatus.suggestedCount}</li>
               <li>Sources analyzed: {aiStatus.sourceCount}</li>
+              <li>Extracted conflicts: {aiStatus.extractedCount}</li>
+              <li>Raw AI text length: {aiStatus.rawTextLength}</li>
               <li>AI mode: {aiStatus.mode}</li>
               <li>AI confidence: {aiStatus.confidenceLabel}</li>
               <li>Human approval required: {aiStatus.requiresHumanApproval ? 'Yes' : 'No'}</li>
               <li>Admin session: {isAdmin ? 'Active' : 'Locked'}</li>
             </ul>
             <small className="ai-trust-note">AI suggestions are advisory and require human admin approval before apply.</small>
+            {aiStatus.warning && <small className="ai-warning-note">{aiStatus.warning}</small>}
             {isAdmin ? (
               <div className="ai-admin-controls">
                 <button type="button" className="btn-mini" onClick={() => runAiAction('/api/update-conflicts')} disabled={aiActionBusy}>
