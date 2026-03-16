@@ -1,4 +1,4 @@
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
 
 function normalizeOpponentType(value) {
   return value === 'non-state' || value === 'proxy' ? value : 'state'
@@ -31,6 +31,18 @@ function extractJsonArray(text) {
   } catch {
     return []
   }
+}
+
+
+function parseGeminiJson(text) {
+  try {
+    const direct = JSON.parse(text)
+    if (Array.isArray(direct)) return direct
+  } catch {
+    // Fall through to array extraction fallback.
+  }
+
+  return extractJsonArray(text)
 }
 
 function dedupeConflicts(conflicts) {
@@ -102,11 +114,13 @@ export async function detectConflictsWithGemini() {
   }
 
   const prompt = [
-    'You are extracting armed conflict records from headlines.',
-    'Return JSON only: an array of objects with keys country, opponent, opponentType, start, end.',
-    'opponentType must be one of: state, non-state, proxy.',
-    'Use null for unknown start/end.',
-    'Do not include commentary or markdown.',
+    'You extract armed conflict records from headlines.',
+    'Output must be STRICT JSON only.',
+    'Return exactly one JSON array and nothing else (no markdown, no prose, no code fences).',
+    'Each item must have keys: country, opponent, opponentType, start, end.',
+    'Allowed opponentType values: state, non-state, proxy.',
+    'If date is unknown, use null for start/end.',
+    'If no valid conflicts are present, return [] exactly.',
     '',
     'Headlines:',
     ...headlines.map((h) => `- ${h}`)
@@ -131,7 +145,11 @@ export async function detectConflictsWithGemini() {
 
   const payload = await response.json()
   const text = payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || '').join('\n') || ''
-  const extracted = extractJsonArray(text)
+
+  // Temporary debug logging for extraction troubleshooting.
+  console.debug('[AI][Gemini raw output]', text)
+
+  const extracted = parseGeminiJson(text)
   const conflicts = dedupeConflicts(extracted)
 
   return {
