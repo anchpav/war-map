@@ -1,0 +1,9 @@
+{
+  "name": "war-map",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd server && node index.js",
+    "dev:client": "cd client && npm run dev"
+  },
+  "version": "0.8.0"
+}
