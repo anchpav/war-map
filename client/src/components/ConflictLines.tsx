@@ -10,6 +10,13 @@ function normalizeOpponentType(value?: OpponentType): OpponentType {
   return value === 'non-state' || value === 'proxy' ? value : 'state'
 }
 
+function isConflictActive(conflict: Conflict): boolean {
+  // Route state mirrors metrics rule for non-timeline rendering.
+  if (conflict.active === false) return false
+  if (conflict.active === true) return true
+  return !Boolean(conflict.end)
+}
+
 function routeStyle(type: OpponentType): { dashArray: string; color: string; pulseDur: string } {
   if (type === 'proxy') return { dashArray: '7 8', color: '#ff9f43', pulseDur: '4.8s' }
   if (type === 'non-state') return { dashArray: '2 7', color: '#facc15', pulseDur: '5.2s' }
@@ -39,7 +46,7 @@ export function ConflictLines({ conflicts, centroids, onHoverText }: ConflictLin
         }
 
         const pathData = buildCurvePath(from, to)
-        const stateClass = conflict.active === false ? 'historical' : 'active'
+        const stateClass = isConflictActive(conflict) ? 'active' : 'historical'
         const opponentType = normalizeOpponentType(conflict.opponentType)
         const style = routeStyle(opponentType)
 

@@ -37,34 +37,31 @@ function yearFromDate(dateText?: string): number | null {
   return Number.isFinite(year) ? year : null
 }
 
-/**
- * Timeline-aware active-state logic used by metrics.
- * Active means started on/before selected year and has no end or ends after selected year.
- */
-function isActiveInYear(conflict: ConflictWithEnd, selectedYear: number): boolean {
-  const startYear = yearFromDate(conflict.start)
-  if (startYear !== null && startYear > selectedYear) return false
+function isConflictActive(conflict: ConflictWithEnd, selectedYear?: number): boolean {
+  // Explicit inactive flag always wins, even when end is missing.
+  if (conflict.active === false) return false
 
-  const endYear = yearFromDate(conflict.end)
-  if (endYear !== null && endYear < selectedYear) return false
+  const startYear = yearFromDate(conflict.start)
+  if (selectedYear !== undefined && startYear !== null && startYear > selectedYear) return false
 
   if (conflict.active === true) return true
 
-  return endYear === null
+  const endYear = yearFromDate(conflict.end)
+  if (endYear !== null) {
+    if (selectedYear !== undefined) return endYear >= selectedYear
+    return false
+  }
+
+  return true
 }
 
-/**
- * Days without active war in a scope:
- * - 0 when at least one active conflict exists in selected year
- * - otherwise since most recently ended conflict
- */
 function daysWithoutActiveWar(conflicts: ConflictWithEnd[], selectedYear: number): number {
   // Truthful no-war-days fallback:
   // - 0 only when an active conflict exists in scope
   // - N/A sentinel when there is no conflict history in scope
   if (!conflicts.length) return NO_WAR_DAYS_NA
 
-  const hasActive = conflicts.some((conflict) => isActiveInYear(conflict, selectedYear))
+  const hasActive = conflicts.some((conflict) => isConflictActive(conflict, selectedYear))
   if (hasActive) return 0
 
   const lastEnded = conflicts
@@ -86,7 +83,7 @@ function buildMetrics(allConflicts: ConflictWithEnd[], selectedCountry: string, 
     return startYear === null || startYear <= selectedYear
   })
 
-  const activeConflictsList = inTimeline.filter((conflict) => isActiveInYear(conflict, selectedYear))
+  const activeConflictsList = inTimeline.filter((conflict) => isConflictActive(conflict, selectedYear))
 
   // Countries-at-war is a state-only metric: non-state/proxy opponents do not add extra countries.
   const countriesAtWar = new Set(
