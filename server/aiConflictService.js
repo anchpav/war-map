@@ -109,7 +109,8 @@ export async function detectConflictsWithGemini() {
       conflicts: [],
       sourceCount: 0,
       rawTextLength: 0,
-      extractedCount: 0
+      extractedCount: 0,
+      rawPreview: ''
     }
   }
 
@@ -133,7 +134,8 @@ export async function detectConflictsWithGemini() {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.1,
-        maxOutputTokens: 1200
+        maxOutputTokens: 3000,
+        responseMimeType: 'application/json'
       }
     })
   })
@@ -156,6 +158,7 @@ export async function detectConflictsWithGemini() {
     conflicts,
     sourceCount: headlines.length,
     rawTextLength: text.length,
-    extractedCount: conflicts.length
+    extractedCount: conflicts.length,
+    rawPreview: text.slice(0, 300)
   }
 }

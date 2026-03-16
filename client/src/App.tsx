@@ -12,6 +12,12 @@ const APP_VERSION = '0.8.0'
 
 type ConflictWithEnd = Conflict
 
+type SuggestedPreviewItem = {
+  country: string
+  opponent: string
+  opponentType?: OpponentType
+}
+
 type AIStatus = {
   available: boolean
   lastRefresh: string
@@ -19,6 +25,7 @@ type AIStatus = {
   sourceCount: number
   extractedCount: number
   rawTextLength: number
+  rawPreview: string
   confidenceLabel: 'experimental'
   requiresHumanApproval: boolean
   lastStatus: string
@@ -125,6 +132,7 @@ export default function App() {
   const [adminMessage, setAdminMessage] = useState('')
   const [adminBusy, setAdminBusy] = useState(false)
   const [aiActionBusy, setAiActionBusy] = useState(false)
+  const [suggestedPreview, setSuggestedPreview] = useState<SuggestedPreviewItem[]>([])
 
   const [aiStatus, setAiStatus] = useState<AIStatus>({
     available: true,
@@ -133,6 +141,7 @@ export default function App() {
     sourceCount: 0,
     extractedCount: 0,
     rawTextLength: 0,
+    rawPreview: '',
     confidenceLabel: 'experimental',
     requiresHumanApproval: true,
     lastStatus: 'Waiting for admin refresh',
@@ -170,6 +179,7 @@ export default function App() {
   useEffect(() => {
     loadDashboardData()
     refreshAdminStatus()
+    loadSuggestedPreview()
   }, [loadDashboardData, refreshAdminStatus])
 
   useEffect(() => {
@@ -241,6 +251,14 @@ export default function App() {
       .slice(0, 3)
   }, [visibleConflicts])
 
+  const datasetVersion = useMemo(() => {
+    if (!conflicts.length) return 'ds-0'
+    const latest = [...conflicts]
+      .map((conflict) => conflict.start || '')
+      .sort((a, b) => b.localeCompare(a))[0]
+    return `ds-${conflicts.length}-${latest || 'na'}`
+  }, [conflicts])
+
   async function sendAdminCode() {
     try {
       setAdminBusy(true)
@@ -296,6 +314,26 @@ export default function App() {
     }
   }
 
+  async function loadSuggestedPreview() {
+    try {
+      const response = await fetch(`/data/conflicts.suggested.json?t=${Date.now()}`, { cache: 'no-store' })
+      if (!response.ok) {
+        setSuggestedPreview([])
+        return
+      }
+
+      const data = (await response.json()) as SuggestedPreviewItem[]
+      if (!Array.isArray(data)) {
+        setSuggestedPreview([])
+        return
+      }
+
+      setSuggestedPreview(data.slice(0, 5))
+    } catch {
+      setSuggestedPreview([])
+    }
+  }
+
   async function runAiAction(path: '/api/update-conflicts' | '/api/apply-conflicts') {
     try {
       setAiActionBusy(true)
@@ -318,6 +356,7 @@ export default function App() {
         sourceCount?: number
         extractedCount?: number
         rawTextLength?: number
+        rawPreview?: string
       }
 
       if (!response.ok) {
@@ -339,6 +378,7 @@ export default function App() {
       const extractedCount = typeof payload.extractedCount === 'number' ? payload.extractedCount : 0
       const rawTextLength = typeof payload.rawTextLength === 'number' ? payload.rawTextLength : 0
       const warning = extractedCount === 0 && path === '/api/update-conflicts' ? 'AI returned no valid conflict records.' : ''
+      const rawPreview = typeof payload.rawPreview === 'string' ? payload.rawPreview : ''
 
       setAiStatus((prev) => ({
         ...prev,
@@ -348,6 +388,7 @@ export default function App() {
         sourceCount: typeof payload.sourceCount === 'number' ? payload.sourceCount : prev.sourceCount,
         extractedCount,
         rawTextLength,
+        rawPreview,
         lastStatus: payload.message || 'AI action completed',
         warning
       }))
@@ -355,6 +396,7 @@ export default function App() {
       if (path === '/api/apply-conflicts') {
         await loadDashboardData()
       }
+      await loadSuggestedPreview()
 
       setAdminMessage(payload.message || (path === '/api/apply-conflicts' ? 'Apply request sent.' : 'Refresh request sent.'))
     } catch {
@@ -372,7 +414,7 @@ export default function App() {
           <h1 onDoubleClick={() => setShowAdminPanel((prev) => !prev)}>Global War Tracker</h1>
           <span className="header-tag">Tactical Command Console</span>
           <p>{loading ? 'Tactical feed sync in progress…' : `Command feed online • ${lastUpdated || '—'}`}</p>
-          <small className="app-version">Build: {APP_VERSION}</small>
+          <small className="app-version">Build: {APP_VERSION} • Dataset: {datasetVersion}</small>
         </div>
         <button type="button" className="btn-mini" onClick={loadDashboardData} disabled={loading}>
           {loading ? 'Sync…' : 'Refresh'}
@@ -442,14 +484,31 @@ export default function App() {
               <li>Suggested conflicts: {aiStatus.suggestedCount}</li>
               <li>Sources analyzed: {aiStatus.sourceCount}</li>
               <li>Extracted conflicts: {aiStatus.extractedCount}</li>
-              <li>Raw AI text length: {aiStatus.rawTextLength}</li>
+              <li>Raw AI response length: {aiStatus.rawTextLength}</li>
+              <li>AI status: {aiStatus.lastStatus}</li>
               <li>AI mode: {aiStatus.mode}</li>
               <li>AI confidence: {aiStatus.confidenceLabel}</li>
               <li>Human approval required: {aiStatus.requiresHumanApproval ? 'Yes' : 'No'}</li>
               <li>Admin session: {isAdmin ? 'Active' : 'Locked'}</li>
             </ul>
             <small className="ai-trust-note">AI suggestions are advisory and require human admin approval before apply.</small>
+            {aiStatus.rawPreview && <pre className="ai-raw-preview">{aiStatus.rawPreview}</pre>}
             {aiStatus.warning && <small className="ai-warning-note">{aiStatus.warning}</small>}
+
+            <div className="ai-suggested-preview">
+              <small className="intel-subtitle">Suggested preview (first 5)</small>
+              {suggestedPreview.length === 0 ? (
+                <small className="ai-admin-note">No staged suggestions yet.</small>
+              ) : (
+                <ul className="compact-list">
+                  {suggestedPreview.map((item, index) => (
+                    <li key={`${item.country}-${item.opponent}-${index}`}>
+                      <strong>{item.country}</strong> vs {item.opponent} <small>({item.opponentType || 'state'})</small>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             {isAdmin ? (
               <div className="ai-admin-controls">
                 <button type="button" className="btn-mini" onClick={() => runAiAction('/api/update-conflicts')} disabled={aiActionBusy}>

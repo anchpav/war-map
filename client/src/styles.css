@@ -496,6 +496,31 @@ body {
   color: #fbbf24;
 }
 
+.ai-raw-preview {
+  margin: 0.22rem 0 0;
+  padding: 0.3rem 0.36rem;
+  max-height: 76px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid #334a60;
+  border-radius: 6px;
+  background: rgba(8, 19, 30, 0.9);
+  color: #9db6c8;
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
+.ai-suggested-preview {
+  margin-top: 0.22rem;
+}
+
+.ai-suggested-preview .compact-list {
+  margin-top: 0.1rem;
+  max-height: 90px;
+  overflow: auto;
+}
+
 .compact-list {
   margin: 0;
   padding-left: 0.95rem;
