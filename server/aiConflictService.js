@@ -1,4 +1,4 @@
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 function normalizeOpponentType(value) {
   return value === 'non-state' || value === 'proxy' ? value : 'state'
