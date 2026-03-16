@@ -1,4 +1,5 @@
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_ENDPOINT =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 function normalizeOpponentType(value) {
   return value === 'non-state' || value === 'proxy' ? value : 'state'
@@ -70,7 +71,11 @@ async function fetchHeadlines(limit = 25) {
       const response = await fetch(feed)
       if (!response.ok) continue
       const xml = await response.text()
-      const matches = [...xml.matchAll(/<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/gi)]
+
+      const matches = [
+        ...xml.matchAll(/<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/gi)
+      ]
+
       for (const match of matches) {
         const title = (match[1] || match[2] || '').trim()
         if (!title || /^(BBC|Al Jazeera|NYT|World)$/i.test(title)) continue
@@ -78,7 +83,7 @@ async function fetchHeadlines(limit = 25) {
         if (headlines.length >= limit) return headlines
       }
     } catch {
-      // Ignore feed-level failure and continue with next source.
+      // ignore one feed failure
     }
   }
 
@@ -125,7 +130,9 @@ export async function detectConflictsWithGemini() {
   }
 
   const payload = await response.json()
-  const text = payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || '').join('\n') || ''
+  const text =
+    payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || '').join('\n') || ''
+
   const extracted = extractJsonArray(text)
   const conflicts = dedupeConflicts(extracted)
 
